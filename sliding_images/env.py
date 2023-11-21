@@ -26,14 +26,27 @@ class SlidingEnv(gym.Env):
             "LEFT",  # moves the right piece to the left
             "RIGHT",  # moves the left piece to the right
         ]
+        self.action = 4  # No action
 
         # Create an initial state with numbered tiles and one blank tile
         self.state = np.arange(0, h * w).reshape((h, w))
         self.blank_pos = (0, 0)
 
         # Initialize the plot
+        def keypress(event):
+            if event.key == "up":
+                self.action = 0
+            elif event.key == "down":
+                self.action = 1
+            elif event.key == "left":
+                self.action = 2
+            elif event.key == "right":
+                self.action = 3
+
         plt.ion()
         self.fig, self.ax = plt.subplots()
+        self.fig.canvas.manager.set_window_title("Sliding Block Puzzle")
+        self.fig.canvas.mpl_connect("key_press_event", keypress)
         self.mat = self.ax.matshow(
             np.zeros((h, w)), cmap=ListedColormap(["white", "gray"])
         )
@@ -47,7 +60,9 @@ class SlidingEnv(gym.Env):
             for i in range(h)
         ]
 
-    def step(self, action):
+    def step(self, action=None):
+        action = action or self.action
+        self.action = 4  # No action
         # Get the position of the blank tile
         y, x = self.blank_pos
 
@@ -157,12 +172,10 @@ for episode in range(10):  # Run 10 episodes for testing
     observation = env.reset()
     done = False
     while not done:
-        action = env.action_space.sample()  # Select a random action
-        observation, reward, done, info = env.step(action)  # Take a step
+        observation, reward, done, info = env.step()  # Take a step
         env.render()  # Render the environment
 
-        print("action:", env.action_meanings[action], "reward:", reward)
-        time.sleep(1)
+        print("reward:", reward)
 
         if done:
             print(f"Episode {episode + 1} finished")
