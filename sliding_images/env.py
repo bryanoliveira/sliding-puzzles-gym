@@ -8,7 +8,7 @@ from matplotlib.colors import ListedColormap
 
 # The 15-tile game environment
 class SlidingEnv(gym.Env):
-    def __init__(self, w=4, h=4, shuffle_steps=100, render_shuffling=True):
+    def __init__(self, w=4, h=4, shuffle_steps=500, render_shuffling=False):
         super().__init__()
         self.grid_size_h = h
         self.grid_size_w = w
@@ -21,7 +21,7 @@ class SlidingEnv(gym.Env):
         )
         self.action_space = gym.spaces.Discrete(4)  # 4 actions (up, down, left, right)
         self.action_meanings = [
-            "UP", # moves the bottom piece up
+            "UP",  # moves the bottom piece up
             "DOWN",  # moves the top piece down
             "LEFT",  # moves the right piece to the left
             "RIGHT",  # moves the left piece to the right
@@ -67,11 +67,12 @@ class SlidingEnv(gym.Env):
                 self.state[y, x],
             )
             self.blank_pos = (y + dy, x + dx)
-            reward = 0  # Example reward
+            reward, done = self.calculate_reward()
         else:
             reward = -1  # Penalty for invalid move
+            done = False
 
-        return self.state, reward, False, {}
+        return self.state, reward, done, {}
 
     def reset(self):
         # Create an initial state with numbered tiles and one blank tile
@@ -95,6 +96,29 @@ class SlidingEnv(gym.Env):
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
 
+    def calculate_reward(self):
+        total_distance = 0
+        solved = True
+        for i in range(self.grid_size_h):
+            for j in range(self.grid_size_w):
+                value = self.state[i, j]
+                if value != 0:
+                    # Calculate goal position for the current value
+                    goal_y, goal_x = divmod(value, self.grid_size_w)
+                    # Sum the Manhattan distances
+                    total_distance += abs(goal_y - i) + abs(goal_x - j)
+                    solved = False
+
+        if solved:
+            return 10, True
+
+        # Normalize the reward
+        max_single_tile_distance = (self.grid_size_h - 1) + (self.grid_size_w - 1)
+        max_distance = max_single_tile_distance * (self.grid_size_h * self.grid_size_w - 1)
+        normalized_reward = 1 - (total_distance / max_distance)
+
+        return normalized_reward, False
+
     def valid_actions(self):
         y, x = self.blank_pos
         valid_actions = []
@@ -117,7 +141,8 @@ class SlidingEnv(gym.Env):
             print("Shuffling the puzzle...")
         for _ in range(steps):
             action = np.random.choice(self.valid_actions())
-            self.step(action)
+            _, r, _, _ = self.step(action)
+            print(r)
             if self.render_shuffling:
                 self.render()
         if self.render_shuffling:
