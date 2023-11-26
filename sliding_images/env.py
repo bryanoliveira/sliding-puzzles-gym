@@ -8,7 +8,7 @@ from matplotlib.colors import ListedColormap
 
 # The 15-tile game environment
 class SlidingEnv(gym.Env):
-    metadata = {"render_modes": ["state", "human"]}
+    metadata = {"render_modes": ["state", "human", "rgb_array"]}
 
     def __init__(
         self, w=4, h=4, shuffle_steps=100, render_mode="state", render_shuffling=False
@@ -49,8 +49,12 @@ class SlidingEnv(gym.Env):
             elif event.key == "right":
                 self.action = 3
 
-        if render_mode == "human":
-            plt.ion()
+        if render_mode in ["human", "rgb_array"]:
+            if render_mode == "rgb_array":
+                plt.ioff()
+            else:
+                plt.ion()
+
             self.fig, self.ax = plt.subplots()
             self.fig.canvas.manager.set_window_title("Sliding Block Puzzle")
             self.fig.canvas.mpl_connect("key_press_event", keypress)
@@ -107,7 +111,7 @@ class SlidingEnv(gym.Env):
         return self.state, {}
 
     def render(self):
-        if self.render_mode == "human":
+        if self.render_mode in ["human", "rgb_array"]:
             self.mat.set_data(np.where(self.state > 0, 1, 0))  # Update the color data
 
             for i in range(self.grid_size_h):
@@ -119,6 +123,9 @@ class SlidingEnv(gym.Env):
 
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
+
+            if self.render_mode == "rgb_array":
+                return np.array(self.fig.canvas.renderer._renderer)
         elif self.render_mode == "state":
             return self.state
 
