@@ -1,6 +1,6 @@
 import time
 
-import gym
+import gymnasium as gym
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
@@ -8,7 +8,7 @@ from matplotlib.colors import ListedColormap
 
 # The 15-tile game environment
 class SlidingEnv(gym.Env):
-    def __init__(self, w=4, h=4, shuffle_steps=500, render_shuffling=False):
+    def __init__(self, w=4, h=4, shuffle_steps=500, render=False, render_shuffling=False):
         super().__init__()
         self.grid_size_h = h
         self.grid_size_w = w
@@ -43,22 +43,23 @@ class SlidingEnv(gym.Env):
             elif event.key == "right":
                 self.action = 3
 
-        plt.ion()
-        self.fig, self.ax = plt.subplots()
-        self.fig.canvas.manager.set_window_title("Sliding Block Puzzle")
-        self.fig.canvas.mpl_connect("key_press_event", keypress)
-        self.mat = self.ax.matshow(
-            np.zeros((h, w)), cmap=ListedColormap(["white", "gray"])
-        )
-        plt.yticks(range(h), [])
-        plt.xticks(range(w), [])
-        self.texts = [
-            [
-                self.ax.text(j, i, "", ha="center", va="center", fontsize=20)
-                for j in range(w)
+        if render:
+            plt.ion()
+            self.fig, self.ax = plt.subplots()
+            self.fig.canvas.manager.set_window_title("Sliding Block Puzzle")
+            self.fig.canvas.mpl_connect("key_press_event", keypress)
+            self.mat = self.ax.matshow(
+                np.zeros((h, w)), cmap=ListedColormap(["white", "gray"])
+            )
+            plt.yticks(range(h), [])
+            plt.xticks(range(w), [])
+            self.texts = [
+                [
+                    self.ax.text(j, i, "", ha="center", va="center", fontsize=20)
+                    for j in range(w)
+                ]
+                for i in range(h)
             ]
-            for i in range(h)
-        ]
 
     def step(self, action=None):
         action = action or self.action
@@ -87,7 +88,7 @@ class SlidingEnv(gym.Env):
             reward = -1  # Penalty for invalid move
             done = False
 
-        return self.state, reward, done, {}
+        return self.state, reward, done, False, {}
 
     def reset(self):
         # Create an initial state with numbered tiles and one blank tile
@@ -96,7 +97,7 @@ class SlidingEnv(gym.Env):
         )
         self.blank_pos = (0, 0)
         self.shuffle(self.shuffle_steps)
-        return self.state
+        return self.state, {}
 
     def render(self, mode="human"):
         self.mat.set_data(np.where(self.state > 0, 1, 0))  # Update the color data
@@ -164,21 +165,23 @@ class SlidingEnv(gym.Env):
             print("Shuffling done!")
 
 
-# Instantiate the environment
-env = SlidingEnv()
+if __name__ == "__main__":
+    # Instantiate the environment
+    env = SlidingEnv()
 
-# Test loop
-for episode in range(10):  # Run 10 episodes for testing
-    observation = env.reset()
-    done = False
-    while not done:
-        observation, reward, done, info = env.step()  # Take a step
-        env.render()  # Render the environment
+    # Test loop
+    for episode in range(10):  # Run 10 episodes for testing
+        observation = env.reset()
+        done = False
+        while not done:
+            action = np.random.choice(env.valid_actions())  # Choose a random action
+            observation, reward, done, info = env.step(action)  # Take a step
+            # env.render()  # Render the environment
 
-        print("reward:", reward)
+            print("reward:", reward)
 
-        if done:
-            print(f"Episode {episode + 1} finished")
-            break
+            if done:
+                print(f"Episode {episode + 1} finished")
+                break
 
-env.close()
+    env.close()
