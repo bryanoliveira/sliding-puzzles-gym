@@ -8,10 +8,14 @@ from matplotlib.colors import ListedColormap
 
 # The 15-tile game environment
 class SlidingEnv(gym.Env):
+    metadata = {"render_modes": ["state", "human"]}
+
     def __init__(
-        self, w=4, h=4, shuffle_steps=100, render=False, render_shuffling=False
+        self, w=4, h=4, shuffle_steps=100, render_mode="state", render_shuffling=False
     ):
         super().__init__()
+        self.render_mode = render_mode
+
         self.grid_size_h = h
         self.grid_size_w = w
         self.shuffle_steps = shuffle_steps
@@ -45,7 +49,7 @@ class SlidingEnv(gym.Env):
             elif event.key == "right":
                 self.action = 3
 
-        if render:
+        if render_mode == "human":
             plt.ion()
             self.fig, self.ax = plt.subplots()
             self.fig.canvas.manager.set_window_title("Sliding Block Puzzle")
@@ -102,18 +106,24 @@ class SlidingEnv(gym.Env):
         self.shuffle(self.shuffle_steps)
         return self.state, {}
 
-    def render(self, mode="human"):
-        self.mat.set_data(np.where(self.state > 0, 1, 0))  # Update the color data
+    def render(self):
+        if self.render_mode == "human":
+            self.mat.set_data(np.where(self.state > 0, 1, 0))  # Update the color data
 
-        for i in range(self.grid_size_h):
-            for j in range(self.grid_size_w):
-                value = self.state[i, j]
-                self.texts[i][j].set_text(
-                    f"{value}" if value > 0 else ""
-                )  # Update text
+            for i in range(self.grid_size_h):
+                for j in range(self.grid_size_w):
+                    value = self.state[i, j]
+                    self.texts[i][j].set_text(
+                        f"{value}" if value > 0 else ""
+                    )  # Update text
 
-        self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
+            self.fig.canvas.draw()
+            self.fig.canvas.flush_events()
+        elif self.render_mode == "state":
+            return self.state
+
+    def close(self):
+        plt.close(self.fig)
 
     def calculate_reward(self):
         total_distance = 0
@@ -126,9 +136,8 @@ class SlidingEnv(gym.Env):
                     goal_y, goal_x = divmod(value, self.grid_size_w)
                     # Sum the Manhattan distances
                     total_distance += abs(goal_y - i) + abs(goal_x - j)
-                    solved = False
 
-        if solved:
+        if total_distance == 0:
             return 10, True
 
         # Normalize the reward
