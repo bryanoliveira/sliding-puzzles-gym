@@ -9,7 +9,7 @@ from matplotlib.colors import ListedColormap
 # The 15-tile game environment
 class SlidingEnv(gym.Env):
     def __init__(
-        self, w=4, h=4, shuffle_steps=500, render=False, render_shuffling=False
+        self, w=4, h=4, shuffle_steps=100, render=False, render_shuffling=False
     ):
         super().__init__()
         self.grid_size_h = h
@@ -31,7 +31,7 @@ class SlidingEnv(gym.Env):
         self.action = 4  # No action
 
         # Create an initial state with numbered tiles and one blank tile
-        self.state = np.arange(0, h * w).reshape((h, w))
+        self.state = np.arange(0, h * w, dtype=np.int32).reshape((h, w))
         self.blank_pos = (0, 0)
 
         # Initialize the plot
@@ -64,8 +64,9 @@ class SlidingEnv(gym.Env):
             ]
 
     def step(self, action=None):
-        action = action or self.action
-        self.action = 4  # No action
+        if action is None: action = self.action
+        self.action = 4  # reset preset action
+
         # Get the position of the blank tile
         y, x = self.blank_pos
 
@@ -92,11 +93,11 @@ class SlidingEnv(gym.Env):
 
         return self.state, reward, done, False, {}
 
-    def reset(self):
+    def reset(self, options=None, seed=None):
         # Create an initial state with numbered tiles and one blank tile
-        self.state = np.arange(0, self.grid_size_h * self.grid_size_w).reshape(
-            (self.grid_size_h, self.grid_size_w)
-        )
+        self.state = np.arange(
+            0, self.grid_size_h * self.grid_size_w, dtype=np.int32
+        ).reshape((self.grid_size_h, self.grid_size_w))
         self.blank_pos = (0, 0)
         self.shuffle(self.shuffle_steps)
         return self.state, {}
@@ -168,26 +169,22 @@ class SlidingEnv(gym.Env):
         if self.render_shuffling:
             print("Shuffling the puzzle...")
         undo_action = None
+        s = None
         for _ in range(steps):
             valid_actions = self.valid_actions()
             if undo_action in valid_actions:
                 valid_actions.remove(undo_action)
-            action = np.random.choice(self.valid_actions())
+            action = np.random.choice(valid_actions)
             undo_action = self.inverse_action(action)
 
             _, r, _, _, _ = self.step(action)
+
             if self.render_shuffling:
                 self.render()
-        print(r)
+
         if self.render_shuffling:
-            print("Shuffling done!")
+            print("Shuffling done! r=", r)
 
-
-gym.envs.register(
-    id="SlidingEnv-v0",
-    entry_point=SlidingEnv,
-    max_episode_steps=1000,
-)
 
 if __name__ == "__main__":
     # Instantiate the environment
