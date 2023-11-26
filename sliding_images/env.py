@@ -8,7 +8,9 @@ from matplotlib.colors import ListedColormap
 
 # The 15-tile game environment
 class SlidingEnv(gym.Env):
-    def __init__(self, w=4, h=4, shuffle_steps=500, render=False, render_shuffling=False):
+    def __init__(
+        self, w=4, h=4, shuffle_steps=500, render=False, render_shuffling=False
+    ):
         super().__init__()
         self.grid_size_h = h
         self.grid_size_w = w
@@ -130,7 +132,9 @@ class SlidingEnv(gym.Env):
 
         # Normalize the reward
         max_single_tile_distance = (self.grid_size_h - 1) + (self.grid_size_w - 1)
-        max_distance = max_single_tile_distance * (self.grid_size_h * self.grid_size_w - 1)
+        max_distance = max_single_tile_distance * (
+            self.grid_size_h * self.grid_size_w - 1
+        )
         normalized_reward = 1 - (total_distance / max_distance)
 
         return normalized_reward, False
@@ -152,18 +156,38 @@ class SlidingEnv(gym.Env):
             valid_actions.append(3)
         return valid_actions
 
+    def inverse_action(self, action):
+        return {
+            0: 1,
+            1: 0,
+            2: 3,
+            3: 2,
+        }.get(action, 4)
+
     def shuffle(self, steps):
         if self.render_shuffling:
             print("Shuffling the puzzle...")
+        undo_action = None
         for _ in range(steps):
+            valid_actions = self.valid_actions()
+            if undo_action in valid_actions:
+                valid_actions.remove(undo_action)
             action = np.random.choice(self.valid_actions())
-            _, r, _, _ = self.step(action)
-            print(r)
+            undo_action = self.inverse_action(action)
+
+            _, r, _, _, _ = self.step(action)
             if self.render_shuffling:
                 self.render()
+        print(r)
         if self.render_shuffling:
             print("Shuffling done!")
 
+
+gym.envs.register(
+    id="SlidingEnv-v0",
+    entry_point=SlidingEnv,
+    max_episode_steps=1000,
+)
 
 if __name__ == "__main__":
     # Instantiate the environment
