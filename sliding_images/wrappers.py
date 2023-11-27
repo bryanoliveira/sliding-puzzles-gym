@@ -93,7 +93,17 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
         return np.array(new_image)
 
     def render(self, mode="human"):
-        current_obs = self.env.unwrapped.state
-        img_obs = self.observation(current_obs)
-        img = Image.fromarray(img_obs, "RGB")
-        img.show()
+        if self.env.unwrapped.render_mode in ["human", "rgb_array"]:
+            current_obs = self.env.unwrapped.state
+            img_obs = self.observation(current_obs)
+            img = Image.fromarray(img_obs, 'RGB')
+
+            if self.env.unwrapped.render_mode == "rgb_array":
+                return np.array(img)
+
+            self.env.unwrapped.ax.imshow(img)
+            self.env.unwrapped.fig.canvas.draw()
+            self.fig.canvas.flush_events()
+
+        elif self.env.unwrapped.render_mode == "state":
+            return self.env.unwrapped.state

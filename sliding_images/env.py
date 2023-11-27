@@ -72,7 +72,8 @@ class SlidingEnv(gym.Env):
             ]
 
     def step(self, action=None):
-        if action is None: action = self.action
+        if action is None:
+            action = self.action
         self.action = 4  # reset preset action
 
         # Get the position of the blank tile
@@ -204,16 +205,18 @@ class SlidingEnv(gym.Env):
 
 if __name__ == "__main__":
     # Instantiate the environment
-    env = SlidingEnv()
+    env = SlidingEnv(render_mode="human")
 
     # Test loop
     for episode in range(10):  # Run 10 episodes for testing
         observation = env.reset()
         done = False
         while not done:
-            action = np.random.choice(env.valid_actions())  # Choose a random action
-            observation, reward, done, info = env.step(action)  # Take a step
-            # env.render()  # Render the environment
+            env.render()  # Render the environment
+
+            # action = np.random.choice(env.valid_actions())  # Choose a random action
+            action = None
+            observation, reward, done, trunc, info = env.step(action)  # Take a step
 
             print("reward:", reward)
 
