@@ -11,7 +11,13 @@ class SlidingEnv(gym.Env):
     metadata = {"render_modes": ["state", "human", "rgb_array"]}
 
     def __init__(
-        self, w=4, h=4, shuffle_steps=100, render_mode="state", render_shuffling=False
+        self,
+        w=4,
+        h=4,
+        shuffle_steps=100,
+        render_mode="state",
+        render_shuffling=False,
+        sparse_rewards=False,
     ):
         super().__init__()
         self.render_mode = render_mode
@@ -20,6 +26,7 @@ class SlidingEnv(gym.Env):
         self.grid_size_w = w
         self.shuffle_steps = shuffle_steps
         self.render_shuffling = render_shuffling
+        self.sparse_rewards = sparse_rewards
 
         # Define action and observation spaces
         self.observation_space = gym.spaces.Box(
@@ -100,7 +107,7 @@ class SlidingEnv(gym.Env):
             reward = -1  # Penalty for invalid move
             done = False
 
-        return self.state, reward, done, False, {}
+        return self.state, reward, done, False, {"is_success": done}
 
     def reset(self, options=None, seed=None):
         # Create an initial state with numbered tiles and one blank tile
@@ -109,7 +116,7 @@ class SlidingEnv(gym.Env):
         ).reshape((self.grid_size_h, self.grid_size_w))
         self.blank_pos = (0, 0)
         self.shuffle(self.shuffle_steps)
-        return self.state, {}
+        return self.state, {"is_success": False}
 
     def render(self):
         if self.render_mode in ["human", "rgb_array"]:
@@ -134,8 +141,13 @@ class SlidingEnv(gym.Env):
         plt.close(self.fig)
 
     def calculate_reward(self):
+        if np.all(self.state.flatten()[:-1] <= self.state.flatten()[1:]):
+            return 10, True
+
+        if self.sparse_rewards:
+            return 0, False
+
         total_distance = 0
-        solved = True
         for i in range(self.grid_size_h):
             for j in range(self.grid_size_w):
                 value = self.state[i, j]
@@ -145,15 +157,12 @@ class SlidingEnv(gym.Env):
                     # Sum the Manhattan distances
                     total_distance += abs(goal_y - i) + abs(goal_x - j)
 
-        if total_distance == 0:
-            return 10, True
-
         # Normalize the reward
         max_single_tile_distance = (self.grid_size_h - 1) + (self.grid_size_w - 1)
         max_distance = max_single_tile_distance * (
             self.grid_size_h * self.grid_size_w - 1
         )
-        normalized_reward = 1 - (total_distance / max_distance)
+        normalized_reward = -(total_distance / max_distance)
 
         return normalized_reward, False
 
