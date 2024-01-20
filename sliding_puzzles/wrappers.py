@@ -22,8 +22,8 @@ class NormalizedObsWrapper(gym.ObservationWrapper):
 
 
 class OneHotEncodingWrapper(gym.ObservationWrapper):
-    def __init__(self, env):
-        super().__init__(env)
+    def __init__(self, env, **kwargs):
+        super().__init__(env, **kwargs)
         self.observation_space = gym.spaces.Box(
             low=0,
             high=1,
@@ -52,8 +52,8 @@ class OneHotEncodingWrapper(gym.ObservationWrapper):
 
 
 class ImagePuzzleWrapper(gym.ObservationWrapper):
-    def __init__(self, env, image_folder="img", image_size=(200, 200)):
-        super(ImagePuzzleWrapper, self).__init__(env)
+    def __init__(self, env, image_folder="img", image_size=(200, 200), **kwargs):
+        super().__init__(env, **kwargs)
         self.image_folder = image_folder
         self.image_size = image_size
         self.section_size = (
@@ -61,15 +61,24 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
             image_size[1] // self.env.unwrapped.grid_size_w,
         )
         self.image_sections = []
+        self.observation_space = gym.spaces.Box(
+            low=0,
+            high=255,
+            shape=self.image_size + (3,),  # channels
+            dtype=np.uint8,
+        )
+
+    def reset(self, **kwargs):
         self.load_random_image()
+        return super().reset(**kwargs)
 
     def load_random_image(self):
+        # load image
         images = os.listdir(self.image_folder)
         random_image_path = os.path.join(self.image_folder, random.choice(images))
         image = Image.open(random_image_path).resize(self.image_size)
-        self.split_image(image)
 
-    def split_image(self, image):
+        # split image
         self.image_sections = []
         for i in range(self.env.unwrapped.grid_size_h):
             for j in range(self.env.unwrapped.grid_size_w):
@@ -96,7 +105,7 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
         if self.env.unwrapped.render_mode in ["human", "rgb_array"]:
             current_obs = self.env.unwrapped.state
             img_obs = self.observation(current_obs)
-            img = Image.fromarray(img_obs, 'RGB')
+            img = Image.fromarray(img_obs, "RGB")
 
             if self.env.unwrapped.render_mode == "rgb_array":
                 return np.array(img)

@@ -1,5 +1,3 @@
-import time
-
 import gymnasium as gym
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,6 +16,7 @@ class SlidingEnv(gym.Env):
         render_mode="state",
         render_shuffling=False,
         sparse_rewards=False,
+        **kwargs,
     ):
         super().__init__()
         self.render_mode = render_mode
