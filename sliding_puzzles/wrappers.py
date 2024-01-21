@@ -7,7 +7,7 @@ import random
 
 class NormalizedObsWrapper(gym.ObservationWrapper):
     def __init__(self, env, **kwargs):
-        super().__init__(env, **kwargs)
+        super().__init__(env)
         self.observation_space = gym.spaces.Box(
             low=0,
             high=1,
@@ -23,7 +23,7 @@ class NormalizedObsWrapper(gym.ObservationWrapper):
 
 class OneHotEncodingWrapper(gym.ObservationWrapper):
     def __init__(self, env, **kwargs):
-        super().__init__(env, **kwargs)
+        super().__init__(env)
         self.observation_space = gym.spaces.Box(
             low=0,
             high=1,
@@ -52,8 +52,8 @@ class OneHotEncodingWrapper(gym.ObservationWrapper):
 
 
 class ImagePuzzleWrapper(gym.ObservationWrapper):
-    def __init__(self, env, image_folder="img", image_size=(200, 200), **kwargs):
-        super().__init__(env, **kwargs)
+    def __init__(self, env, image_folder="img", image_size=(128, 128), **kwargs):
+        super().__init__(env)
         self.image_folder = image_folder
         self.image_size = image_size
         self.section_size = (
