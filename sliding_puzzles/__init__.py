@@ -4,9 +4,11 @@ from sliding_puzzles.env import SlidingEnv
 from sliding_puzzles import wrappers
 
 
-MAX_EPISODE_STEPS=1000
+MAX_EPISODE_STEPS = 1000
+
 
 class EnvType(Enum):
+    raw = "raw"
     image = "image"
     normalized = "normalized"
     onehot = "onehot"
@@ -15,11 +17,10 @@ class EnvType(Enum):
 def make(**env_config):
     env = SlidingEnv(**env_config)
 
-    if (
-        "variation" not in env_config
-        or EnvType(env_config["variation"]) is EnvType.normalized
-    ):
+    if "variation" not in env_config or EnvType(env_config["variation"]) is EnvType.raw:
         pass
+    elif EnvType(env_config["variation"]) is EnvType.normalized:
+        env = wrappers.NormalizedObsWrapper(env)
     elif EnvType(env_config["variation"]) is EnvType.onehot:
         env = wrappers.OneHotEncodingWrapper(env)
     elif EnvType(env_config["variation"]) is EnvType.image:
