@@ -149,7 +149,8 @@ class SlidingEnv(gym.Env):
             return self.state
 
     def close(self):
-        plt.close(self.fig)
+        if hasattr(self, "fig"):
+            plt.close(self.fig)
 
     def calculate_reward(self):
         if np.all(self.state.flatten()[:-1] <= self.state.flatten()[1:]):
