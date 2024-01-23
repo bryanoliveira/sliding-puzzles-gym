@@ -34,7 +34,7 @@ class SlidingEnv(gym.Env):
         self.shuffle_steps = shuffle_steps
         self.render_shuffling = render_shuffling
         self.sparse_rewards = sparse_rewards
-        self.sparse_mode = sparse_mode
+        self.sparse_mode = SparseMode(sparse_mode)
         self.win_reward = win_reward
 
         # Define action and observation spaces
