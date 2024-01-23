@@ -1,7 +1,13 @@
+from enum import Enum
 import gymnasium as gym
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+
+
+class SparseMode(Enum):
+    win = "win"
+    invalid_and_win = "invalid_and_win"
 
 
 # The 15-tile game environment
@@ -16,6 +22,8 @@ class SlidingEnv(gym.Env):
         render_mode="state",
         render_shuffling=False,
         sparse_rewards=False,
+        sparse_mode=SparseMode.invalid_and_win,
+        win_reward=10,
         **kwargs,
     ):
         super().__init__()
@@ -26,6 +34,8 @@ class SlidingEnv(gym.Env):
         self.shuffle_steps = shuffle_steps
         self.render_shuffling = render_shuffling
         self.sparse_rewards = sparse_rewards
+        self.sparse_mode = sparse_mode
+        self.win_reward = win_reward
 
         # Define action and observation spaces
         self.observation_space = gym.spaces.Box(
@@ -103,7 +113,9 @@ class SlidingEnv(gym.Env):
             self.blank_pos = (y + dy, x + dx)
             reward, done = self.calculate_reward()
         else:
-            reward = -1  # Penalty for invalid move
+            reward = (
+                0 if self.sparse_mode == SparseMode.win else -1
+            )  # Penalty for invalid move
             done = False
 
         return self.state, reward, done, False, {"is_success": done}
@@ -141,7 +153,7 @@ class SlidingEnv(gym.Env):
 
     def calculate_reward(self):
         if np.all(self.state.flatten()[:-1] <= self.state.flatten()[1:]):
-            return 10, True
+            return self.win_reward, True
 
         if self.sparse_rewards:
             return 0, False
