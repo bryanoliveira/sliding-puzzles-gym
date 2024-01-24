@@ -19,11 +19,13 @@ class SlidingEnv(gym.Env):
         w=4,
         h=4,
         shuffle_steps=100,
+        shuffle_target_reward=None,
         render_mode="state",
         render_shuffling=False,
         sparse_rewards=False,
         sparse_mode=SparseMode.invalid_and_win,
         win_reward=10,
+        blank_value=-1,
         **kwargs,
     ):
         super().__init__()
@@ -31,11 +33,17 @@ class SlidingEnv(gym.Env):
 
         self.grid_size_h = h
         self.grid_size_w = w
+        assert shuffle_steps > 0, "A max shuffle step count must be set."
         self.shuffle_steps = shuffle_steps
+        assert shuffle_target_reward is None or (
+            shuffle_target_reward < 0 and shuffle_target_reward > -1
+        ), "The target reward must be negative and greater than the minimum reward."
+        self.shuffle_target_reward = shuffle_target_reward
         self.render_shuffling = render_shuffling
         self.sparse_rewards = sparse_rewards
         self.sparse_mode = SparseMode(sparse_mode)
         self.win_reward = win_reward
+        self.blank_value = blank_value
 
         # Define action and observation spaces
         self.observation_space = gym.spaces.Box(
@@ -53,6 +61,7 @@ class SlidingEnv(gym.Env):
         # Create an initial state with numbered tiles and one blank tile
         self.state = np.arange(0, h * w, dtype=np.int32).reshape((h, w))
         self.blank_pos = (0, 0)
+        self.state[self.blank_pos] = self.blank_value
 
         # Initialize the plot
         def keypress(event):
@@ -126,6 +135,9 @@ class SlidingEnv(gym.Env):
             0, self.grid_size_h * self.grid_size_w, dtype=np.int32
         ).reshape((self.grid_size_h, self.grid_size_w))
         self.blank_pos = (0, 0)
+        self.state[self.blank_pos] = self.blank_value
+
+        # Shuffle the tiles
         self.shuffle(self.shuffle_steps)
         return self.state, {"is_success": False}
 
@@ -163,7 +175,7 @@ class SlidingEnv(gym.Env):
         for i in range(self.grid_size_h):
             for j in range(self.grid_size_w):
                 value = self.state[i, j]
-                if value != 0:
+                if value > 0:
                     # Calculate goal position for the current value
                     goal_y, goal_x = divmod(value, self.grid_size_w)
                     # Sum the Manhattan distances
@@ -206,9 +218,20 @@ class SlidingEnv(gym.Env):
     def shuffle(self, steps):
         if self.render_shuffling:
             print("Shuffling the puzzle...")
+
         undo_action = None
-        s = None
-        for _ in range(steps):
+        r = 0
+
+        while (
+            # if target reward is not set, shuffle until max steps is reached
+            self.shuffle_target_reward is None
+            and steps > 0
+        ) or (
+            # if a target reward is set, shuffle until reach target or max steps is reached
+            self.shuffle_target_reward is not None
+            and r > self.shuffle_target_reward
+            and steps > 0
+        ):
             valid_actions = self.valid_actions()
             if undo_action in valid_actions:
                 valid_actions.remove(undo_action)
@@ -219,6 +242,8 @@ class SlidingEnv(gym.Env):
 
             if self.render_shuffling:
                 self.render()
+
+            steps -= 1
 
         if self.render_shuffling:
             print("Shuffling done! r=", r)
