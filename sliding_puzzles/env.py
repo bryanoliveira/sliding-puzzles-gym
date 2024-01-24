@@ -37,7 +37,7 @@ class SlidingEnv(gym.Env):
         self.shuffle_steps = shuffle_steps
         assert shuffle_target_reward is None or (
             shuffle_target_reward < 0 and shuffle_target_reward > -1
-        ), "The target reward must be negative and greater than the minimum reward."
+        ), "The target reward must be negative and greater than the theoretical minimum reward."
         self.shuffle_target_reward = shuffle_target_reward
         self.render_shuffling = render_shuffling
         self.sparse_rewards = sparse_rewards
@@ -96,7 +96,7 @@ class SlidingEnv(gym.Env):
                 for i in range(h)
             ]
 
-    def step(self, action=None):
+    def step(self, action=None, force_dense_reward=False):
         if action is None:
             action = self.action
         self.action = 4  # reset preset action
@@ -120,7 +120,7 @@ class SlidingEnv(gym.Env):
                 self.state[y, x],
             )
             self.blank_pos = (y + dy, x + dx)
-            reward, done = self.calculate_reward()
+            reward, done = self.calculate_reward(force_dense=force_dense_reward)
         else:
             reward = (
                 0 if self.sparse_mode == SparseMode.win else -1
@@ -164,11 +164,11 @@ class SlidingEnv(gym.Env):
         if hasattr(self, "fig"):
             plt.close(self.fig)
 
-    def calculate_reward(self):
+    def calculate_reward(self, force_dense=False):
         if np.all(self.state.flatten()[:-1] <= self.state.flatten()[1:]):
             return self.win_reward, True
 
-        if self.sparse_rewards:
+        if not force_dense and self.sparse_rewards:
             return 0, False
 
         total_distance = 0
@@ -238,7 +238,7 @@ class SlidingEnv(gym.Env):
             action = np.random.choice(valid_actions)
             undo_action = self.inverse_action(action)
 
-            _, r, _, _, _ = self.step(action)
+            _, r, _, _, _ = self.step(action, force_dense_reward=True)
 
             if self.render_shuffling:
                 self.render()
@@ -246,7 +246,10 @@ class SlidingEnv(gym.Env):
             steps -= 1
 
         if self.render_shuffling:
-            print("Shuffling done! r=", r)
+            print(f"Shuffling done! r={r} steps={steps}")
+
+
+# Test the environment
 
 
 if __name__ == "__main__":
