@@ -9,15 +9,20 @@ class NormalizedObsWrapper(gym.ObservationWrapper):
     def __init__(self, env, **kwargs):
         super().__init__(env)
         self.observation_space = gym.spaces.Box(
-            low=0,
+            low=-1,
             high=1,
             shape=self.env.unwrapped.observation_space.shape,
             dtype=np.float32,
         )
 
     def observation(self, observation):
-        return observation / (
-            self.env.unwrapped.grid_size_h * self.env.unwrapped.grid_size_w
+        # divide where > 0 by grid size,
+        # leave < 0 untouched.
+        return np.where(
+            observation > 0,
+            observation
+            / (self.env.unwrapped.grid_size_h * self.env.unwrapped.grid_size_w - 1),
+            observation,
         )
 
 
@@ -46,16 +51,24 @@ class OneHotEncodingWrapper(gym.ObservationWrapper):
                     one_hot_index
                     * self.env.unwrapped.grid_size_h
                     * self.env.unwrapped.grid_size_w
-                    + tile_value
+                    + (tile_value if tile_value > 0 else 0)  # blank tile may be -1
                 ] = 1
         return one_hot_encoded
 
 
 class ImagePuzzleWrapper(gym.ObservationWrapper):
-    def __init__(self, env, image_folder="img", image_size=(128, 128), **kwargs):
+    def __init__(
+        self,
+        env,
+        image_folder="img",
+        image_size=(128, 128),
+        background_color_rgb=(0, 0, 0),
+        **kwargs
+    ):
         super().__init__(env)
         self.image_folder = image_folder
         self.image_size = image_size
+        self.background_color_rgb = background_color_rgb
         self.section_size = (
             image_size[0] // self.env.unwrapped.grid_size_h,
             image_size[1] // self.env.unwrapped.grid_size_w,
@@ -90,11 +103,12 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
                 self.image_sections.append(section)
 
     def observation(self, obs):
-        new_image = Image.new("RGB", self.image_size)
+        new_image = Image.new("RGB", self.image_size, self.background_color_rgb)
+        # paint tiles
         for i in range(self.env.unwrapped.grid_size_h):
             for j in range(self.env.unwrapped.grid_size_w):
                 section_idx = obs[i, j]
-                if section_idx != 0:
+                if section_idx > 0:
                     section = self.image_sections[section_idx]
                     new_image.paste(
                         section, (j * self.section_size[1], i * self.section_size[0])
@@ -116,3 +130,11 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
 
         elif self.env.unwrapped.render_mode == "state":
             return self.env.unwrapped.state
+
+
+class ExponentialRewardWrapper(gym.RewardWrapper):
+    def __init__(self, env, **kwargs):
+        super().__init__(env)
+
+    def reward(self, reward):
+        return np.exp(reward)
