@@ -17,7 +17,7 @@ class SlidingEnv(gym.Env):
     def __init__(
         self,
         w=4,
-        h=4,
+        h=None,
         shuffle_steps=100,
         shuffle_target_reward=None,
         render_mode="state",
@@ -30,7 +30,7 @@ class SlidingEnv(gym.Env):
     ):
         super().__init__()
         self.render_mode = render_mode
-
+        if h is None: h = w
         self.grid_size_h = h
         self.grid_size_w = w
         assert shuffle_steps > 0, "A max shuffle step count must be set."

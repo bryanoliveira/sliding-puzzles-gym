@@ -1,5 +1,8 @@
 from enum import Enum
+import random
+
 import gymnasium as gym
+import numpy as np
 from sliding_puzzles.env import SlidingEnv
 from sliding_puzzles import wrappers
 
@@ -15,7 +18,12 @@ class EnvType(Enum):
 
 
 def make(**env_config):
-    env = SlidingEnv(**env_config)
+    seed = env_config.get("seed", None)
+    if seed is not None:
+        np.random.seed(seed)
+        random.seed(seed)
+
+    env = SlidingEnv(**env_config)    
 
     if "variation" not in env_config or EnvType(env_config["variation"]) is EnvType.raw:
         pass
