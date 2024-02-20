@@ -21,6 +21,7 @@ class SlidingEnv(gym.Env):
         shuffle_steps=100,
         shuffle_target_reward=None,
         render_mode="state",
+        render_size=(32, 32),
         render_shuffling=False,
         sparse_rewards=False,
         sparse_mode=SparseMode.invalid_and_win,
@@ -30,7 +31,9 @@ class SlidingEnv(gym.Env):
     ):
         super().__init__()
         self.render_mode = render_mode
-        if h is None: h = w
+        self.render_size = render_size
+        if h is None:
+            h = w
         self.grid_size_h = h
         self.grid_size_w = w
         assert shuffle_steps > 0, "A max shuffle step count must be set."
@@ -47,7 +50,7 @@ class SlidingEnv(gym.Env):
 
         # Define action and observation spaces
         self.observation_space = gym.spaces.Box(
-            low=0, high=h * w, shape=(h, w), dtype=np.int32
+            low=min(blank_value, 0), high=h * w, shape=(h, w), dtype=np.int32
         )
         self.action_space = gym.spaces.Discrete(4)  # 4 actions (up, down, left, right)
         self.action_meanings = [
@@ -80,7 +83,7 @@ class SlidingEnv(gym.Env):
             else:
                 plt.ion()
 
-            self.fig, self.ax = plt.subplots()
+            self.fig, self.ax = plt.subplots(figsize=self.render_size)
             self.fig.canvas.manager.set_window_title("Sliding Block Puzzle")
             self.fig.canvas.mpl_connect("key_press_event", keypress)
             self.mat = self.ax.matshow(
@@ -163,6 +166,9 @@ class SlidingEnv(gym.Env):
     def close(self):
         if hasattr(self, "fig"):
             plt.close(self.fig)
+
+    def __del__(self):
+        self.close()
 
     def calculate_reward(self, force_dense=False):
         if np.all(self.state.flatten()[:-1] <= self.state.flatten()[1:]):

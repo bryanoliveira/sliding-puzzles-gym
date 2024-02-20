@@ -77,7 +77,7 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
         self.observation_space = gym.spaces.Box(
             low=0,
             high=255,
-            shape=self.image_size + (3,),  # channels
+            shape=tuple(self.image_size) + (3,),  # channels
             dtype=np.uint8,
         )
 
