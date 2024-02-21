@@ -67,16 +67,6 @@ class SlidingEnv(gym.Env):
         self.state[self.blank_pos] = self.blank_value
 
         # Initialize the plot
-        def keypress(event):
-            if event.key == "up":
-                self.action = 0
-            elif event.key == "down":
-                self.action = 1
-            elif event.key == "left":
-                self.action = 2
-            elif event.key == "right":
-                self.action = 3
-
         if render_mode in ["human", "rgb_array"]:
             if render_mode == "rgb_array":
                 plt.ioff()
@@ -84,8 +74,18 @@ class SlidingEnv(gym.Env):
                 plt.ion()
 
             self.fig, self.ax = plt.subplots(figsize=self.render_size)
-            self.fig.canvas.manager.set_window_title("Sliding Block Puzzle")
-            self.fig.canvas.mpl_connect("key_press_event", keypress)
+
+            # Setup app
+            if render_mode == "human":
+
+                def keypress(event):
+                    if event.key in ["up", "down", "left", "right"]:
+                        self.action = ["up", "down", "left", "right"].index(event.key)
+
+                self.fig.canvas.manager.set_window_title("Sliding Block Puzzle")
+                self.fig.canvas.mpl_connect("key_press_event", keypress)
+
+            # Draw
             self.mat = self.ax.matshow(
                 np.zeros((h, w)), cmap=ListedColormap(["white", "gray"])
             )
