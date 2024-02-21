@@ -3,6 +3,7 @@ import gymnasium as gym
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
+from PIL import Image
 
 
 class SparseMode(Enum):
@@ -73,7 +74,7 @@ class SlidingEnv(gym.Env):
             else:
                 plt.ion()
 
-            self.fig, self.ax = plt.subplots(figsize=self.render_size)
+            self.fig, self.ax = plt.subplots()
 
             # Setup app
             if render_mode == "human":
@@ -159,7 +160,10 @@ class SlidingEnv(gym.Env):
             self.fig.canvas.flush_events()
 
             if self.render_mode == "rgb_array":
-                return np.array(self.fig.canvas.renderer._renderer)
+                img = np.array(self.fig.canvas.renderer._renderer)
+                img = Image.fromarray(img)
+                img = img.resize(self.render_size)
+                return np.array(img)
         elif self.render_mode == "state":
             return self.state
 
