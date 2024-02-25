@@ -6,11 +6,6 @@ from matplotlib.colors import ListedColormap
 from PIL import Image
 
 
-class SparseMode(Enum):
-    win = "win"
-    invalid_and_win = "invalid_and_win"
-
-
 # The 15-tile game environment
 class SlidingEnv(gym.Env):
     metadata = {"render_modes": ["state", "human", "rgb_array"]}
@@ -25,8 +20,9 @@ class SlidingEnv(gym.Env):
         render_size=(32, 32),
         render_shuffling=False,
         sparse_rewards=False,
-        sparse_mode=SparseMode.invalid_and_win,
         win_reward=10,
+        move_reward=0,
+        invalid_move_reward=None,
         blank_value=-1,
         **kwargs,
     ):
@@ -45,8 +41,9 @@ class SlidingEnv(gym.Env):
         self.shuffle_target_reward = shuffle_target_reward
         self.render_shuffling = render_shuffling
         self.sparse_rewards = sparse_rewards
-        self.sparse_mode = SparseMode(sparse_mode)
         self.win_reward = win_reward
+        self.move_reward = move_reward
+        self.invalid_move_reward = invalid_move_reward
         self.blank_value = blank_value
 
         # Define action and observation spaces
@@ -61,6 +58,8 @@ class SlidingEnv(gym.Env):
             "RIGHT",  # moves the left piece to the right
         ]
         self.action = 4  # No action
+        self.last_reward = self.move_reward
+        self.last_done = False
 
         # Create an initial state with numbered tiles and one blank tile
         self.state = np.arange(0, h * w, dtype=np.int32).reshape((h, w))
@@ -114,7 +113,7 @@ class SlidingEnv(gym.Env):
             1: (-1, 0),  # Down: decrease row index
             2: (0, 1),  # Left: increase column index
             3: (0, -1),  # Right: decrease column index
-        }.get(action, (0, 0))
+        }.get(action, (0, 0))  # 4: do nothing
 
         # Check if the move is valid (not out of bounds)
         if 0 <= y + dy < self.grid_size_h and 0 <= x + dx < self.grid_size_w:
@@ -125,12 +124,13 @@ class SlidingEnv(gym.Env):
             )
             self.blank_pos = (y + dy, x + dx)
             reward, done = self.calculate_reward(force_dense=force_dense_reward)
+        elif self.invalid_move_reward is not None:
+            reward, done = self.invalid_move_reward, self.last_done
         else:
-            reward = (
-                0 if self.sparse_mode == SparseMode.win else -1
-            )  # Penalty for invalid move
-            done = False
+            reward, done = self.last_reward, self.last_done
 
+        self.last_reward = reward
+        self.last_done = done
         return self.state, reward, done, False, {"is_success": done}
 
     def reset(self, options=None, seed=None):
@@ -179,7 +179,7 @@ class SlidingEnv(gym.Env):
             return self.win_reward, True
 
         if not force_dense and self.sparse_rewards:
-            return 0, False
+            return self.move_reward, False
 
         total_distance = 0
         for i in range(self.grid_size_h):
