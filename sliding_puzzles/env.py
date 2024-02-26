@@ -23,6 +23,7 @@ class SlidingEnv(gym.Env):
         win_reward=10,
         move_reward=0,
         invalid_move_reward=None,
+        circular_actions=False,
         blank_value=-1,
         **kwargs,
     ):
@@ -44,6 +45,7 @@ class SlidingEnv(gym.Env):
         self.win_reward = win_reward
         self.move_reward = move_reward
         self.invalid_move_reward = invalid_move_reward
+        self.circular_actions = circular_actions
         self.blank_value = blank_value
 
         # Define action and observation spaces
@@ -116,13 +118,17 @@ class SlidingEnv(gym.Env):
         }.get(action, (0, 0))  # 4: do nothing
 
         # Check if the move is valid (not out of bounds)
-        if 0 <= y + dy < self.grid_size_h and 0 <= x + dx < self.grid_size_w:
+        if (
+            0 <= y + dy < self.grid_size_h and 0 <= x + dx < self.grid_size_w
+        ) or self.circular_actions:
             # Swap the blank tile with the adjacent tile
-            self.state[y, x], self.state[y + dy, x + dx] = (
-                self.state[y + dy, x + dx],
+            # If the action is circular, swap the blank tile with the tile on the opposite side
+            new_pos = (y + dy) % self.grid_size_h, (x + dx) % self.grid_size_w
+            self.state[y, x], self.state[new_pos] = (
+                self.state[new_pos],
                 self.state[y, x],
             )
-            self.blank_pos = (y + dy, x + dx)
+            self.blank_pos = new_pos
             reward, done = self.calculate_reward(force_dense=force_dense_reward)
         elif self.invalid_move_reward is not None:
             reward, done = self.invalid_move_reward, self.last_done

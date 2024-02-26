@@ -4,14 +4,15 @@ env = sliding_puzzles.make(
     render_mode="human",
     w=3,
     h=3,
-    sparse_rewards=True,
-    move_reward=-1,
+    sparse_rewards=False,
+    # move_reward=-1,
     shuffle_steps=100,
     # shuffle_target_reward=-0.5,
     # render_shuffling=True,
     variation="raw",
     # image_folder="imgs/single",
     # background_color_rgb=(255, 0, 0)
+    circular_actions=True,
 )
 obs = env.reset()
 total_reward = 0
