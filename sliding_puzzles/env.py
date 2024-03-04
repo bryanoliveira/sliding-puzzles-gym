@@ -1,4 +1,5 @@
-from enum import Enum
+import random
+from typing import Optional
 import gymnasium as gym
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,19 +13,19 @@ class SlidingEnv(gym.Env):
 
     def __init__(
         self,
-        w=4,
-        h=None,
-        shuffle_steps=100,
-        shuffle_target_reward=None,
-        render_mode="state",
-        render_size=(32, 32),
-        render_shuffling=False,
-        sparse_rewards=False,
-        win_reward=10,
-        move_reward=0,
-        invalid_move_reward=None,
-        circular_actions=False,
-        blank_value=-1,
+        w: int = 4,
+        h: Optional[int] = None,
+        shuffle_steps: int = 100,
+        shuffle_target_reward: Optional[float] = None,
+        render_mode: str = "state",
+        render_size: tuple = (32, 32),
+        render_shuffling: bool = False,
+        sparse_rewards: bool = False,
+        win_reward: float = 10,
+        move_reward: float = 0,
+        invalid_move_reward: Optional[float] = None,
+        circular_actions: bool = False,
+        blank_value: int = -1,
         **kwargs,
     ):
         super().__init__()
@@ -34,7 +35,7 @@ class SlidingEnv(gym.Env):
             h = w
         self.grid_size_h = h
         self.grid_size_w = w
-        assert shuffle_steps > 0, "A max shuffle step count must be set."
+        assert shuffle_steps >= 0, "A max shuffle step count must be set."
         self.shuffle_steps = shuffle_steps
         assert shuffle_target_reward is None or (
             shuffle_target_reward < 0 and shuffle_target_reward > -1
@@ -104,7 +105,7 @@ class SlidingEnv(gym.Env):
     def step(self, action=None, force_dense_reward=False):
         if action is None:
             action = self.action
-        self.action = 4  # reset preset action
+        self.action = 4  # reset preset action to "do nothing"
 
         # Get the position of the blank tile
         y, x = self.blank_pos
@@ -115,7 +116,7 @@ class SlidingEnv(gym.Env):
             1: (-1, 0),  # Down: decrease row index
             2: (0, 1),  # Left: increase column index
             3: (0, -1),  # Right: decrease column index
-        }.get(action, (0, 0))  # 4: do nothing
+        }.get(action, (0, 0))
 
         # Check if the move is valid (not out of bounds)
         if (
@@ -235,6 +236,8 @@ class SlidingEnv(gym.Env):
         if self.render_shuffling:
             print("Shuffling the puzzle...")
 
+        steps += random.randint(0, 5)
+
         undo_action = None
         r = 0
 
@@ -247,6 +250,9 @@ class SlidingEnv(gym.Env):
             self.shuffle_target_reward is not None
             and r > self.shuffle_target_reward
             and steps > 0
+        ) or (
+            # continue shuffling until the puzzle is not solved
+            r == self.win_reward
         ):
             valid_actions = self.valid_actions()
             if undo_action in valid_actions:
