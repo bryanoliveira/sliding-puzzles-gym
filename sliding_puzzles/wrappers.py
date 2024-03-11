@@ -23,7 +23,7 @@ class NormalizedObsWrapper(gym.ObservationWrapper):
             observation
             / (self.env.unwrapped.grid_size_h * self.env.unwrapped.grid_size_w - 1),
             observation,
-        )
+        ).astype(np.float32)
 
 
 class OneHotEncodingWrapper(gym.ObservationWrapper):
@@ -42,7 +42,7 @@ class OneHotEncodingWrapper(gym.ObservationWrapper):
         )
 
     def observation(self, obs):
-        one_hot_encoded = np.zeros(self.observation_space.shape)
+        one_hot_encoded = np.zeros(self.observation_space.shape, dtype=np.float32)
         for i in range(self.env.unwrapped.grid_size_h):
             for j in range(self.env.unwrapped.grid_size_w):
                 tile_value = obs[i, j]
@@ -61,7 +61,7 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
         self,
         env,
         image_folder="img",
-        image_size=(128, 128),
+        image_size=(128, 128),  # w x h
         background_color_rgb=(0, 0, 0),
         **kwargs
     ):
@@ -77,7 +77,7 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
         self.observation_space = gym.spaces.Box(
             low=0,
             high=255,
-            shape=tuple(self.image_size) + (3,),  # channels
+            shape=tuple(self.image_size[::-1]) + (3,),  # height x width channels
             dtype=np.uint8,
         )
 
@@ -113,18 +113,17 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
                     new_image.paste(
                         section, (j * self.section_size[1], i * self.section_size[0])
                     )
-        return np.array(new_image)
+        return np.array(new_image, dtype=np.uint8)
 
     def render(self, mode="human"):
         if self.env.unwrapped.render_mode in ["human", "rgb_array"]:
             current_obs = self.env.unwrapped.state
             img_obs = self.observation(current_obs)
-            img = Image.fromarray(img_obs, "RGB")
 
             if self.env.unwrapped.render_mode == "rgb_array":
-                return np.array(img)
+                return img_obs
 
-            self.env.unwrapped.ax.imshow(img)
+            self.env.unwrapped.ax.imshow(Image.fromarray(img_obs, "RGB"))
             self.env.unwrapped.fig.canvas.draw()
             self.fig.canvas.flush_events()
 
