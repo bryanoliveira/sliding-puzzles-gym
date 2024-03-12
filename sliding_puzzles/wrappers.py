@@ -61,7 +61,7 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
         self,
         env,
         image_folder="img",
-        image_size=(128, 128),  # w x h
+        image_size=(128, 128),  # width x height
         background_color_rgb=(0, 0, 0),
         **kwargs
     ):
@@ -70,8 +70,8 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
         self.image_size = image_size
         self.background_color_rgb = background_color_rgb
         self.section_size = (
-            image_size[0] // self.env.unwrapped.grid_size_h + 1,
-            image_size[1] // self.env.unwrapped.grid_size_w + 1,
+            image_size[1] // self.env.unwrapped.grid_size_h,
+            image_size[0] // self.env.unwrapped.grid_size_w,
         )
         self.image_sections = []
         self.observation_space = gym.spaces.Box(
