@@ -31,8 +31,11 @@ class SlidingEnv(gym.Env):
         super().__init__()
         self.render_mode = render_mode
         self.render_size = render_size
+        assert w or h, "At least one of the grid dimensions must be set."
         if h is None:
             h = w
+        elif w is None:
+            w = h
         self.grid_size_h = h
         self.grid_size_w = w
         assert shuffle_steps >= 0, "A max shuffle step count must be set."

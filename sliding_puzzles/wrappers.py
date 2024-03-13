@@ -63,12 +63,14 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
         image_folder="img",
         image_size=(128, 128),  # width x height
         background_color_rgb=(0, 0, 0),
+        normalize=True,
         **kwargs
     ):
         super().__init__(env)
         self.image_folder = image_folder
         self.image_size = image_size
         self.background_color_rgb = background_color_rgb
+        self.normalize = normalize
         self.section_size = (
             image_size[1] // self.env.unwrapped.grid_size_h,
             image_size[0] // self.env.unwrapped.grid_size_w,
@@ -113,6 +115,10 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
                     new_image.paste(
                         section, (j * self.section_size[1], i * self.section_size[0])
                     )
+
+        if self.normalize:
+            return np.array(new_image) / 255
+
         return np.array(new_image, dtype=np.uint8)
 
     def render(self, mode="human"):
