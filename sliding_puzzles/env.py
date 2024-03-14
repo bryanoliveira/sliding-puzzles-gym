@@ -41,6 +41,12 @@ class SlidingEnv(gym.Env):
         self.grid_size_h = h
         self.grid_size_w = w
         self.sparse_rewards = sparse_rewards
+        assert (
+            win_reward != move_reward
+        ), "The win reward must be different from the move reward."
+        assert (
+            invalid_move_reward != move_reward
+        ), "The invalid move reward must be None or different from the move reward."
         self.win_reward = win_reward
         self.move_reward = move_reward
         self.invalid_move_reward = invalid_move_reward
@@ -72,7 +78,9 @@ class SlidingEnv(gym.Env):
         self.last_done = False
 
         # Create an initial state with numbered tiles and one blank tile
-        self.state, self.blank_pos = self.get_shuffled_puzzle()
+        self.state = np.arange(0, h * w).reshape(h, w)
+        self.blank_pos = (0, 0)
+        self.state[self.blank_pos] = self.blank_value
 
         # Initialize the plot
         if render_mode in ["human", "rgb_array"]:
@@ -149,13 +157,13 @@ class SlidingEnv(gym.Env):
             reward,
             done,
             False,
-            {"is_success": done, "last_action": action},
+            {"is_success": done, "state": self.state, "last_action": action},
         )
 
     def reset(self, options=None, seed=None):
         # Create an initial state with numbered tiles and one blank tile
-        self.state, self.blank_pos = self.get_shuffled_puzzle()
-        return self.state, {"is_success": False}
+        self.set_shuffled_puzzle()
+        return self.state, {"is_success": False, "state": self.state}
 
     def render(self):
         if self.render_mode in ["human", "rgb_array"]:
@@ -218,37 +226,41 @@ class SlidingEnv(gym.Env):
 
         return normalized_reward, False
 
-    def get_shuffled_puzzle(self):
+    def set_shuffled_puzzle(self):
         # Exclude the blank tile for shuffling
         puzzle_array = np.arange(1, self.grid_size_h * self.grid_size_w)
         # Shuffle the array
         np.random.shuffle(puzzle_array)
         inversions = count_inversions(puzzle_array)
         # Randomly choose a row for the blank tile
-        blank_pos = (
+        self.blank_pos = (
             random.randint(0, self.grid_size_h - 1),
             random.randint(0, self.grid_size_w - 1),
         )
 
         # Adjust the puzzle to make sure it's solvable
         if not is_solvable(
-            inversions, blank_pos[0], self.grid_size_w, self.grid_size_h
+            inversions, self.blank_pos[0], self.grid_size_w, self.grid_size_h
         ):
             # Swap the first two tiles
             puzzle_array[0], puzzle_array[1] = puzzle_array[1], puzzle_array[0]
             # Recalculate inversions after swap
             inversions = count_inversions(puzzle_array)
             assert is_solvable(
-                inversions, blank_pos[0], self.grid_size_w, self.grid_size_h
+                inversions, self.blank_pos[0], self.grid_size_w, self.grid_size_h
             ), "Shuffled puzzle is not solvable!"
 
         # Place the blank tile in the puzzle
         puzzle_array = np.insert(
             puzzle_array,
-            self.grid_size_w * blank_pos[0] + blank_pos[1],
+            self.grid_size_w * self.blank_pos[0] + self.blank_pos[1],
             self.blank_value,
         )
-        return puzzle_array.reshape((self.grid_size_h, self.grid_size_w)), blank_pos
+        self.state = puzzle_array.reshape((self.grid_size_h, self.grid_size_w))
+
+        # If the puzzle is solved, execute a random action
+        if self.calculate_reward()[0] == self.win_reward:
+            self.step(np.random.choice(self.valid_actions()))
 
     def valid_actions(self):
         y, x = self.blank_pos

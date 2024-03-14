@@ -2,31 +2,41 @@ import sliding_puzzles
 
 env = sliding_puzzles.make(
     render_mode="human",
-    w=3,
-    h=3,
+    w=2,
+    # circular_actions=True,
+
     sparse_rewards=False,
+    # sparse_mode="win",
+    win_reward=10,
     # move_reward=-1,
-    shuffle_steps=100,
-    # shuffle_target_reward=-0.5,
-    # render_shuffling=True,
-    variation="raw",
-    # image_folder="imgs/single",
+    # invalid_move_reward=-1,
+
+    shuffle_steps=50,
+    variation=["raw", "onehot", "image"][2],
+    image_folder=[
+        "/mnt/data/Documents/sliding-puzzle/imgs/single",
+        "/mnt/data/Documents/sliding-puzzle/imgs/mnist",
+        "/mnt/data/Documents/sliding-puzzle/imgs/imagenet-1k",
+    ][0],
     # background_color_rgb=(255, 0, 0)
-    circular_actions=True,
+    # image_size=(210, 160),
 )
-obs = env.reset()
+obs, info = env.reset()
+print(info)
 total_reward = 0
 while True:
     env.render()
-    print(obs)
     obs, reward, done, trunc, info = env.step(None)
-    total_reward += reward
-    print(reward)
+    if info["last_action"] < 4:
+        total_reward += reward
+        print(reward, done, trunc, info, total_reward)
     if done or trunc:
+        env.render()
         print("Done!", info)
         print("Total reward:", total_reward)
         total_reward = 0
-        break
-
+        input("Press enter to reset...")
+        print("Resetting...")
+        obs, info = env.reset()
 
 env.close()

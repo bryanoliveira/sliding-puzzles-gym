@@ -111,7 +111,7 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
             for j in range(self.env.unwrapped.grid_size_w):
                 section_idx = obs[i, j]
                 if section_idx > 0:
-                    section = self.image_sections[section_idx]
+                    section = self.image_sections[section_idx - 1]
                     new_image.paste(
                         section, (j * self.section_size[1], i * self.section_size[0])
                     )
@@ -129,7 +129,8 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
             if self.env.unwrapped.render_mode == "rgb_array":
                 return img_obs
 
-            self.env.unwrapped.ax.imshow(Image.fromarray(img_obs, "RGB"))
+            self.env.unwrapped.ax.clear()
+            self.env.unwrapped.ax.imshow(img_obs)
             self.env.unwrapped.fig.canvas.draw()
             self.env.unwrapped.fig.canvas.flush_events()
 
