@@ -141,6 +141,10 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
         elif self.env.unwrapped.render_mode == "state":
             return self.env.unwrapped.state
 
+    def setup_render_controls(self):
+        # required so subclass self.reset function can be called from keypress
+        self.env.unwrapped.setup_render_controls(self)
+
 
 class ExponentialRewardWrapper(gym.RewardWrapper):
     def __init__(self, env, **kwargs):

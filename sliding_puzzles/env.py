@@ -34,10 +34,14 @@ class SlidingEnv(gym.Env):
         self.render_mode = render_mode
         self.render_size = render_size
         assert w or h, "At least one of the grid dimensions must be set."
+        assert (
+            w > 1 or h > 1
+        ), "At least one of the grid dimensions must be greater than 1."
         if h is None:
             h = w
         elif w is None:
             w = h
+        # assert w > 1 and h > 1, "The grid dimensions must be greater than 1."
         self.grid_size_h = h
         self.grid_size_w = w
         self.sparse_rewards = sparse_rewards
@@ -90,19 +94,6 @@ class SlidingEnv(gym.Env):
                 plt.ion()
 
             self.fig, self.ax = plt.subplots()
-
-            # Setup app
-            if render_mode == "human":
-                action_keys = [a.lower() for a in self.action_meanings]
-
-                def keypress(event):
-                    if event.key in action_keys:
-                        self.action = action_keys.index(event.key)
-
-                self.fig.canvas.manager.set_window_title("Sliding Block Puzzle")
-                self.fig.canvas.mpl_connect("key_press_event", keypress)
-
-            # Draw
             self.mat = self.ax.matshow(
                 np.zeros((h, w)), cmap=ListedColormap(["white", "gray"])
             )
@@ -115,6 +106,8 @@ class SlidingEnv(gym.Env):
                 ]
                 for i in range(h)
             ]
+            if render_mode == "human":
+                self.fig.canvas.manager.set_window_title("Sliding Block Puzzle")
 
     def step(self, action=None, force_dense_reward=False):
         if action is None:
@@ -187,6 +180,20 @@ class SlidingEnv(gym.Env):
                 return np.array(img, dtype=np.uint8)
         elif self.render_mode == "state":
             return self.state
+
+    def setup_render_controls(self, env_instance=None):
+        action_keys = [a.lower() for a in self.action_meanings]
+
+        def keypress(event):
+            if event.key in action_keys:
+                self.action = action_keys.index(event.key)
+            elif event.key == "r":
+                if env_instance is not None:
+                    env_instance.reset()
+                else:
+                    self.reset()
+
+        self.fig.canvas.mpl_connect("key_press_event", keypress)
 
     def close(self):
         if hasattr(self, "fig"):
@@ -332,7 +339,7 @@ if __name__ == "__main__":
 
     # Test loop
     for episode in range(10):  # Run 10 episodes for testing
-        observation = env.reset()
+        observation, info = env.reset()
         done = False
         while not done:
             env.render()  # Render the environment
@@ -340,8 +347,8 @@ if __name__ == "__main__":
             # action = np.random.choice(env.valid_actions())  # Choose a random action
             action = None
             observation, reward, done, trunc, info = env.step(action)  # Take a step
-
-            print("reward:", reward)
+            if info["last_action"] < 4:
+                print("reward:", reward)
 
             if done:
                 print(f"Episode {episode + 1} finished")
