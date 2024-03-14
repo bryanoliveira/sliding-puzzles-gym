@@ -51,7 +51,7 @@ class OneHotEncodingWrapper(gym.ObservationWrapper):
                     one_hot_index
                     * self.env.unwrapped.grid_size_h
                     * self.env.unwrapped.grid_size_w
-                    + (tile_value if tile_value > 0 else 0)  # blank tile may be -1
+                    + (tile_value if tile_value > 0 else 0)  # blank tile may be negative
                 ] = 1
         return one_hot_encoded
 
@@ -80,7 +80,7 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
             low=0,
             high=255,
             shape=tuple(self.image_size[::-1]) + (3,),  # height x width channels
-            dtype=np.uint8,
+            dtype=np.float32 if self.normalize else np.uint8,
         )
 
     def reset(self, **kwargs):
@@ -104,7 +104,7 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
                 section = image.crop((left, upper, right, lower))
                 self.image_sections.append(section)
 
-    def observation(self, obs):
+    def observation(self, obs, skip_normalization=False):
         new_image = Image.new("RGB", self.image_size, self.background_color_rgb)
         # paint tiles
         for i in range(self.env.unwrapped.grid_size_h):
@@ -116,22 +116,22 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
                         section, (j * self.section_size[1], i * self.section_size[0])
                     )
 
-        if self.normalize:
-            return np.array(new_image) / 255
+        if not skip_normalization and self.normalize:
+            return np.array(new_image, dtype=np.float32) / 255
 
         return np.array(new_image, dtype=np.uint8)
 
     def render(self, mode="human"):
         if self.env.unwrapped.render_mode in ["human", "rgb_array"]:
             current_obs = self.env.unwrapped.state
-            img_obs = self.observation(current_obs)
+            img_obs = self.observation(current_obs, skip_normalization=True)
 
             if self.env.unwrapped.render_mode == "rgb_array":
                 return img_obs
 
             self.env.unwrapped.ax.imshow(Image.fromarray(img_obs, "RGB"))
             self.env.unwrapped.fig.canvas.draw()
-            self.fig.canvas.flush_events()
+            self.env.unwrapped.fig.canvas.flush_events()
 
         elif self.env.unwrapped.render_mode == "state":
             return self.env.unwrapped.state

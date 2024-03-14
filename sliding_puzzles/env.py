@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from PIL import Image
 
+from sliding_puzzles.utils import count_inversions, is_solvable, inverse_action
+
 
 # The 15-tile game environment
 class SlidingEnv(gym.Env):
@@ -15,7 +17,6 @@ class SlidingEnv(gym.Env):
         self,
         w: int = 4,
         h: Optional[int] = None,
-        shuffle_steps: int = 100,
         shuffle_target_reward: Optional[float] = None,
         render_mode: str = "state",
         render_size: tuple = (32, 32),
@@ -29,6 +30,7 @@ class SlidingEnv(gym.Env):
         **kwargs,
     ):
         super().__init__()
+        # Config
         self.render_mode = render_mode
         self.render_size = render_size
         assert w or h, "At least one of the grid dimensions must be set."
@@ -38,39 +40,39 @@ class SlidingEnv(gym.Env):
             w = h
         self.grid_size_h = h
         self.grid_size_w = w
-        assert shuffle_steps >= 0, "A max shuffle step count must be set."
-        self.shuffle_steps = shuffle_steps
-        assert shuffle_target_reward is None or (
-            shuffle_target_reward < 0 and shuffle_target_reward > -1
-        ), "The target reward must be negative and greater than the theoretical minimum reward."
-        self.shuffle_target_reward = shuffle_target_reward
-        self.render_shuffling = render_shuffling
         self.sparse_rewards = sparse_rewards
         self.win_reward = win_reward
         self.move_reward = move_reward
         self.invalid_move_reward = invalid_move_reward
         self.circular_actions = circular_actions
+        assert blank_value <= 0, "The blank value must not be positive."
         self.blank_value = blank_value
+        # DEPRECATED:
+        self.render_shuffling = render_shuffling
+        assert shuffle_target_reward is None or (
+            shuffle_target_reward < 0 and shuffle_target_reward > -1
+        ), "The target reward must be negative and greater than the theoretical minimum reward."
+        self.shuffle_target_reward = shuffle_target_reward
 
         # Define action and observation spaces
         self.observation_space = gym.spaces.Box(
             low=min(blank_value, 0), high=h * w, shape=(h, w), dtype=np.int32
         )
-        self.action_space = gym.spaces.Discrete(4)  # 4 actions (up, down, left, right)
+        self.action_space = gym.spaces.Discrete(4)
         self.action_meanings = [
             "UP",  # moves the bottom piece up
             "DOWN",  # moves the top piece down
             "LEFT",  # moves the right piece to the left
             "RIGHT",  # moves the left piece to the right
         ]
+
+        # Initializations
         self.action = 4  # No action
         self.last_reward = self.move_reward
         self.last_done = False
 
         # Create an initial state with numbered tiles and one blank tile
-        self.state = np.arange(0, h * w, dtype=np.int32).reshape((h, w))
-        self.blank_pos = (0, 0)
-        self.state[self.blank_pos] = self.blank_value
+        self.state, self.blank_pos = self.get_shuffled_puzzle()
 
         # Initialize the plot
         if render_mode in ["human", "rgb_array"]:
@@ -83,10 +85,11 @@ class SlidingEnv(gym.Env):
 
             # Setup app
             if render_mode == "human":
+                action_keys = [a.lower() for a in self.action_meanings]
 
                 def keypress(event):
-                    if event.key in ["up", "down", "left", "right"]:
-                        self.action = ["up", "down", "left", "right"].index(event.key)
+                    if event.key in action_keys:
+                        self.action = action_keys.index(event.key)
 
                 self.fig.canvas.manager.set_window_title("Sliding Block Puzzle")
                 self.fig.canvas.mpl_connect("key_press_event", keypress)
@@ -141,23 +144,23 @@ class SlidingEnv(gym.Env):
 
         self.last_reward = reward
         self.last_done = done
-        return self.state, reward, done, False, {"is_success": done}
+        return (
+            self.state,
+            reward,
+            done,
+            False,
+            {"is_success": done, "last_action": action},
+        )
 
     def reset(self, options=None, seed=None):
         # Create an initial state with numbered tiles and one blank tile
-        self.state = np.arange(
-            0, self.grid_size_h * self.grid_size_w, dtype=np.int32
-        ).reshape((self.grid_size_h, self.grid_size_w))
-        self.blank_pos = (0, 0)
-        self.state[self.blank_pos] = self.blank_value
-
-        # Shuffle the tiles
-        self.shuffle(self.shuffle_steps)
+        self.state, self.blank_pos = self.get_shuffled_puzzle()
         return self.state, {"is_success": False}
 
     def render(self):
         if self.render_mode in ["human", "rgb_array"]:
-            self.mat.set_data(np.where(self.state > 0, 1, 0))  # Update the color data
+            # Update the color data
+            self.mat.set_data(np.where(self.state > 0, 1, 0))
 
             for i in range(self.grid_size_h):
                 for j in range(self.grid_size_w):
@@ -173,7 +176,7 @@ class SlidingEnv(gym.Env):
                 img = np.array(self.fig.canvas.renderer._renderer)
                 img = Image.fromarray(img)
                 img = img.resize(self.render_size)
-                return np.array(img)
+                return np.array(img, dtype=np.uint8)
         elif self.render_mode == "state":
             return self.state
 
@@ -185,7 +188,12 @@ class SlidingEnv(gym.Env):
         self.close()
 
     def calculate_reward(self, force_dense=False):
-        if np.all(self.state.flatten()[:-1] <= self.state.flatten()[1:]):
+        # Considering the blank value is always less than any other value,
+        # we can check if the puzzle is solved by checking if the state is sorted
+        flat_state = self.state.flatten()
+        if flat_state[-1] == self.blank_value and np.all(
+            flat_state[:-2] <= flat_state[1:-1]
+        ):
             return self.win_reward, True
 
         if not force_dense and self.sparse_rewards:
@@ -197,7 +205,7 @@ class SlidingEnv(gym.Env):
                 value = self.state[i, j]
                 if value > 0:
                     # Calculate goal position for the current value
-                    goal_y, goal_x = divmod(value, self.grid_size_w)
+                    goal_y, goal_x = divmod(value - 1, self.grid_size_w)
                     # Sum the Manhattan distances
                     total_distance += abs(goal_y - i) + abs(goal_x - j)
 
@@ -209,6 +217,38 @@ class SlidingEnv(gym.Env):
         normalized_reward = -(total_distance / max_distance)
 
         return normalized_reward, False
+
+    def get_shuffled_puzzle(self):
+        # Exclude the blank tile for shuffling
+        puzzle_array = np.arange(1, self.grid_size_h * self.grid_size_w)
+        # Shuffle the array
+        np.random.shuffle(puzzle_array)
+        inversions = count_inversions(puzzle_array)
+        # Randomly choose a row for the blank tile
+        blank_pos = (
+            random.randint(0, self.grid_size_h - 1),
+            random.randint(0, self.grid_size_w - 1),
+        )
+
+        # Adjust the puzzle to make sure it's solvable
+        if not is_solvable(
+            inversions, blank_pos[0], self.grid_size_w, self.grid_size_h
+        ):
+            # Swap the first two tiles
+            puzzle_array[0], puzzle_array[1] = puzzle_array[1], puzzle_array[0]
+            # Recalculate inversions after swap
+            inversions = count_inversions(puzzle_array)
+            assert is_solvable(
+                inversions, blank_pos[0], self.grid_size_w, self.grid_size_h
+            ), "Shuffled puzzle is not solvable!"
+
+        # Place the blank tile in the puzzle
+        puzzle_array = np.insert(
+            puzzle_array,
+            self.grid_size_w * blank_pos[0] + blank_pos[1],
+            self.blank_value,
+        )
+        return puzzle_array.reshape((self.grid_size_h, self.grid_size_w)), blank_pos
 
     def valid_actions(self):
         y, x = self.blank_pos
@@ -227,14 +267,6 @@ class SlidingEnv(gym.Env):
             valid_actions.append(3)
         return valid_actions
 
-    def inverse_action(self, action):
-        return {
-            0: 1,
-            1: 0,
-            2: 3,
-            3: 2,
-        }.get(action, 4)
-
     def shuffle(self, steps):
         if self.render_shuffling:
             print("Shuffling the puzzle...")
@@ -245,23 +277,28 @@ class SlidingEnv(gym.Env):
         r = 0
 
         while (
-            # if target reward is not set, shuffle until max steps is reached
-            self.shuffle_target_reward is None
-            and steps > 0
-        ) or (
-            # if a target reward is set, shuffle until reach target or max steps is reached
-            self.shuffle_target_reward is not None
-            and r > self.shuffle_target_reward
-            and steps > 0
-        ) or (
-            # continue shuffling until the puzzle is not solved
-            r == self.win_reward
+            (
+                # if target reward is not set, shuffle until max steps is reached
+                self.shuffle_target_reward is None
+                and steps > 0
+            )
+            or (
+                # if a target reward is set, shuffle until reach target or max steps is reached
+                self.shuffle_target_reward is not None
+                and r > self.shuffle_target_reward
+                and steps > 0
+            )
+            or (
+                # continue shuffling until the puzzle is not solved
+                r
+                == self.win_reward
+            )
         ):
             valid_actions = self.valid_actions()
             if undo_action in valid_actions:
                 valid_actions.remove(undo_action)
             action = np.random.choice(valid_actions)
-            undo_action = self.inverse_action(action)
+            undo_action = inverse_action(action)
 
             _, r, _, _, _ = self.step(action, force_dense_reward=True)
 
