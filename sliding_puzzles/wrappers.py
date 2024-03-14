@@ -1,8 +1,10 @@
+import math
+import os
+import random
+
 import gymnasium as gym
 import numpy as np
 from PIL import Image
-import os
-import random
 
 
 class NormalizedObsWrapper(gym.ObservationWrapper):
@@ -51,7 +53,8 @@ class OneHotEncodingWrapper(gym.ObservationWrapper):
                     one_hot_index
                     * self.env.unwrapped.grid_size_h
                     * self.env.unwrapped.grid_size_w
-                    + (tile_value if tile_value > 0 else 0)  # blank tile may be negative
+                    # blank tile may be negative
+                    + (tile_value if tile_value > 0 else 0)
                 ] = 1
         return one_hot_encoded
 
@@ -72,8 +75,8 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
         self.background_color_rgb = background_color_rgb
         self.normalize = normalize
         self.section_size = (
-            image_size[1] // self.env.unwrapped.grid_size_h,
-            image_size[0] // self.env.unwrapped.grid_size_w,
+            math.ceil(image_size[0] / self.env.unwrapped.grid_size_w),
+            math.ceil(image_size[1] / self.env.unwrapped.grid_size_h),
         )
         self.image_sections = []
         self.observation_space = gym.spaces.Box(
@@ -97,11 +100,12 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
         self.image_sections = []
         for i in range(self.env.unwrapped.grid_size_h):
             for j in range(self.env.unwrapped.grid_size_w):
-                left = j * self.section_size[1]
-                upper = i * self.section_size[0]
-                right = left + self.section_size[1]
-                lower = upper + self.section_size[0]
+                left = j * self.section_size[0]
+                upper = i * self.section_size[1]
+                right = min(left + self.section_size[0], self.image_size[0])
+                lower = min(upper + self.section_size[1], self.image_size[1])
                 section = image.crop((left, upper, right, lower))
+                section = section.resize(self.section_size)
                 self.image_sections.append(section)
 
     def observation(self, obs, skip_normalization=False):
@@ -113,7 +117,7 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
                 if section_idx > 0:
                     section = self.image_sections[section_idx - 1]
                     new_image.paste(
-                        section, (j * self.section_size[1], i * self.section_size[0])
+                        section, (j * self.section_size[0], i * self.section_size[1])
                     )
 
         if not skip_normalization and self.normalize:
