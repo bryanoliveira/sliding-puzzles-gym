@@ -11,16 +11,17 @@ from sliding_puzzles.utils import count_inversions, is_solvable, inverse_action
 
 # The 15-tile game environment
 class SlidingEnv(gym.Env):
-    metadata = {"render_modes": ["state", "human", "rgb_array"]}
+    metadata = {
+        "render_modes": ["state", "human", "rgb_array"],
+        "render.modes": ["state", "human", "rgb_array"],
+    }
 
     def __init__(
         self,
-        w: int = 4,
+        w: Optional[int] = None,
         h: Optional[int] = None,
-        shuffle_target_reward: Optional[float] = None,
         render_mode: str = "state",
-        render_size: tuple = (32, 32),
-        render_shuffling: bool = False,
+        render_size: tuple = (32, 32),  # W x H
         sparse_rewards: bool = False,
         win_reward: float = 10,
         move_reward: float = 0,
@@ -31,38 +32,54 @@ class SlidingEnv(gym.Env):
     ):
         super().__init__()
         # Config
-        self.render_mode = render_mode
-        self.render_size = render_size
-        assert w or h, "At least one of the grid dimensions must be set."
         assert (
-            w > 1 or h > 1
-        ), "At least one of the grid dimensions must be greater than 1."
+            render_mode in self.metadata["render_modes"]
+        ), f"render_mode must be one of {self.metadata['render_modes']}. Got: {render_mode}"
+        self.render_mode = render_mode
+        assert (
+            render_size is not None and len(render_size) == 2
+        ), f"Render size must have len=2. Got: {render_size}"
+        self.render_size = render_size
+        assert w or h, f"At least one of the grid dimensions must be set. Got {w}x{h}"
         if h is None:
             h = w
         elif w is None:
             w = h
-        # assert w > 1 and h > 1, "The grid dimensions must be greater than 1."
+        assert (
+            w > 1 or h > 1
+        ), f"At least one of the grid dimensions must be greater than 1. Got {w}x{h}"
         self.grid_size_h = h
         self.grid_size_w = w
         self.sparse_rewards = sparse_rewards
         assert (
             win_reward != move_reward
-        ), "The win reward must be different from the move reward."
+        ), f"win_reward must be different from the move reward. Got: win_reward={win_reward}, move_reward={move_reward}"
+        assert (
+            type(win_reward) in [int, float] and win_reward >= 0
+        ), f"win_reward must be numeric and not negative. Got: {win_reward} (type: {type(win_reward)})"
+        self.win_reward = win_reward
         assert (
             invalid_move_reward != move_reward
-        ), "The invalid move reward must be None or different from the move reward."
-        self.win_reward = win_reward
+        ), f"invalid_move_reward must be None or different from the move reward. Got: invalid_move_reward={invalid_move_reward}, move_reward={move_reward}"
+        assert (
+            type(move_reward) in [int, float] and move_reward <= 0
+        ), f"move_reward must be numeric and not positive. Got: {move_reward} (type: {type(move_reward)})"
         self.move_reward = move_reward
+        if invalid_move_reward is not None:
+            assert (
+                type(invalid_move_reward)
+                in [
+                    int,
+                    float,
+                ]
+                and invalid_move_reward < 0
+            ), f"invalid_move_reward must be None or numeric and not negative. Got: {invalid_move_reward} (type: {type(invalid_move_reward)})"
         self.invalid_move_reward = invalid_move_reward
         self.circular_actions = circular_actions
-        assert blank_value <= 0, "The blank value must not be positive."
+        assert (
+            type(blank_value) is int and blank_value <= 0
+        ), f"blank_value must be a non-positive integer. Got {blank_value} (type: {type(blank_value)})"
         self.blank_value = blank_value
-        # DEPRECATED:
-        self.render_shuffling = render_shuffling
-        assert shuffle_target_reward is None or (
-            shuffle_target_reward < 0 and shuffle_target_reward > -1
-        ), "The target reward must be negative and greater than the theoretical minimum reward."
-        self.shuffle_target_reward = shuffle_target_reward
 
         # Define action and observation spaces
         self.observation_space = gym.spaces.Box(
@@ -158,8 +175,11 @@ class SlidingEnv(gym.Env):
         self.set_shuffled_puzzle()
         return self.state, {"is_success": False, "state": self.state}
 
-    def render(self):
-        if self.render_mode in ["human", "rgb_array"]:
+    def render(self, mode=None):
+        if mode is None:
+            mode = self.render_mode
+
+        if mode in ["human", "rgb_array"]:
             # Update the color data
             self.mat.set_data(np.where(self.state > 0, 1, 0))
 
@@ -173,12 +193,12 @@ class SlidingEnv(gym.Env):
             self.fig.canvas.draw()
             self.fig.canvas.flush_events()
 
-            if self.render_mode == "rgb_array":
+            if mode == "rgb_array":
                 img = np.array(self.fig.canvas.renderer._renderer)
-                img = Image.fromarray(img)
+                img = Image.fromarray(img).convert('RGB')
                 img = img.resize(self.render_size)
                 return np.array(img, dtype=np.uint8)
-        elif self.render_mode == "state":
+        elif mode == "state":
             return self.state
 
     def setup_render_controls(self, env_instance=None):
@@ -196,8 +216,11 @@ class SlidingEnv(gym.Env):
         self.fig.canvas.mpl_connect("key_press_event", keypress)
 
     def close(self):
-        if hasattr(self, "fig"):
-            plt.close(self.fig)
+        if hasattr(self, "fig") and self.fig is not None:
+            try:
+                plt.close(self.fig)
+            except:
+                pass
 
     def __del__(self):
         self.close()
@@ -286,25 +309,22 @@ class SlidingEnv(gym.Env):
             valid_actions.append(3)
         return valid_actions
 
-    def shuffle(self, steps):
-        if self.render_shuffling:
+    def shuffle_serial(self, steps=1000, render=False, target_reward=None):
+        if render:
             print("Shuffling the puzzle...")
-
-        steps += random.randint(0, 5)
 
         undo_action = None
         r = 0
-
         while (
             (
                 # if target reward is not set, shuffle until max steps is reached
-                self.shuffle_target_reward is None
+                target_reward is None
                 and steps > 0
             )
             or (
                 # if a target reward is set, shuffle until reach target or max steps is reached
-                self.shuffle_target_reward is not None
-                and r > self.shuffle_target_reward
+                target_reward is not None
+                and r > target_reward
                 and steps > 0
             )
             or (
@@ -321,12 +341,12 @@ class SlidingEnv(gym.Env):
 
             _, r, _, _, _ = self.step(action, force_dense_reward=True)
 
-            if self.render_shuffling:
+            if render:
                 self.render()
 
             steps -= 1
 
-        if self.render_shuffling:
+        if render:
             print(f"Shuffling done! r={r} steps={steps}")
 
 
