@@ -1,8 +1,9 @@
+import numpy as np
 import sliding_puzzles
 
 env = sliding_puzzles.make(
     render_mode="human",
-    w=2,
+    w=3,
     # circular_actions=True,
 
     # sparse_rewards=True,
@@ -26,7 +27,9 @@ print(info)
 total_reward = 0
 while True:
     env.render()
-    obs, reward, done, trunc, info = env.step(None)
+    # action = np.random.choice(env.valid_actions())
+    action = None
+    obs, reward, done, trunc, info = env.step(action)
     if info["last_action"] < 4:
         total_reward += reward
         print(reward, done, trunc, info, total_reward)
