@@ -63,13 +63,16 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
     def __init__(
         self,
         env,
-        image_folder="img",
+        image_folder="single",
         image_size=(128, 128),  # width x height
         background_color_rgb=(0, 0, 0),
         normalize=True,
         **kwargs
     ):
         super().__init__(env)
+        if not os.path.isabs(image_folder):
+            base_dir = os.path.dirname(__file__)
+            image_folder = os.path.join(base_dir, "../imgs", image_folder)
         self.image_folder = image_folder
         self.image_size = image_size
         self.background_color_rgb = background_color_rgb
