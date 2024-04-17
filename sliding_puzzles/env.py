@@ -15,6 +15,7 @@ class SlidingEnv(gym.Env):
         "render_modes": ["state", "human", "rgb_array"],
         "render.modes": ["state", "human", "rgb_array"],
         "reward_modes": ["distances", "percent_solved"],
+        "shuffle_modes": ["fast", "serial"],
     }
 
     def __init__(
@@ -30,6 +31,10 @@ class SlidingEnv(gym.Env):
         circular_actions: bool = False,
         blank_value: int = -1,
         reward_mode: str = "distances",
+        shuffle_mode: str = "fast",
+        shuffle_steps: int = 100,
+        shuffle_target_reward: Optional[float] = None,
+        shuffle_render: bool = False,
         **kwargs,
     ):
         super().__init__()
@@ -86,6 +91,19 @@ class SlidingEnv(gym.Env):
             type(blank_value) is int and blank_value <= 0
         ), f"blank_value must be a non-positive integer. Got {blank_value} (type: {type(blank_value)})"
         self.blank_value = blank_value
+        assert (
+            shuffle_mode in self.metadata["shuffle_modes"]
+        ), f"shuffle_mode must be one of {self.metadata['shuffle_modes']}. Got: {shuffle_mode}"
+        self.shuffle_mode = shuffle_mode
+        assert type(shuffle_steps) is int and (
+            shuffle_mode == "fast" or shuffle_steps > 0
+        ), f"shuffle_steps must be a positive integer. Got: {shuffle_steps} (type: {type(shuffle_steps)})"
+        self.shuffle_steps = shuffle_steps
+        assert shuffle_target_reward is None or (
+            type(shuffle_target_reward) is float and shuffle_target_reward < 0
+        ), f"shuffle_target_reward must be None or a negative float. Got: {shuffle_target_reward} (type: {type(shuffle_target_reward)})"
+        self.shuffle_target_reward = shuffle_target_reward
+        self.shuffle_render = shuffle_render
 
         # Define action and observation spaces
         self.observation_space = gym.spaces.Box(
@@ -105,6 +123,7 @@ class SlidingEnv(gym.Env):
         self.last_done = False
 
         # Create an initial state with numbered tiles and one blank tile
+        self.set_solved_puzzle()
 
         # Calculate the max distance each tile can be from its goal
         self.total_max_distances = 0
@@ -187,7 +206,15 @@ class SlidingEnv(gym.Env):
 
     def reset(self, options=None, seed=None):
         # Create an initial state with numbered tiles and one blank tile
-        self.set_shuffled_puzzle()
+        if self.shuffle_mode == "fast":
+            self.set_shuffled_puzzle()
+        else:
+            self.set_solved_puzzle()
+            self.shuffle_serial(
+                steps=self.shuffle_steps,
+                target_reward=self.shuffle_target_reward,
+                render=self.shuffle_render,
+            )
         return self.state, {"is_success": False, "state": self.state}
 
     def render(self, mode=None):
@@ -270,6 +297,13 @@ class SlidingEnv(gym.Env):
             reward = -np.mean(flat_state[:-1] != solved)
 
         return reward, False
+
+    def set_solved_puzzle(self):
+        self.state = np.arange(1, self.grid_size_h * self.grid_size_w + 1).reshape(
+            self.grid_size_h, self.grid_size_w
+        )
+        self.blank_pos = (self.grid_size_h - 1, self.grid_size_w - 1)
+        self.state[self.blank_pos] = self.blank_value
 
     def set_shuffled_puzzle(self):
         # Exclude the blank tile for shuffling
