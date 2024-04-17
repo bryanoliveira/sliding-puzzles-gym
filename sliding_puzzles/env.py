@@ -14,6 +14,7 @@ class SlidingEnv(gym.Env):
     metadata = {
         "render_modes": ["state", "human", "rgb_array"],
         "render.modes": ["state", "human", "rgb_array"],
+        "reward_modes": ["distances", "percent_solved"],
     }
 
     def __init__(
@@ -28,6 +29,7 @@ class SlidingEnv(gym.Env):
         invalid_move_reward: Optional[float] = None,
         circular_actions: bool = False,
         blank_value: int = -1,
+        reward_mode: str = "distances",
         **kwargs,
     ):
         super().__init__()
@@ -75,6 +77,10 @@ class SlidingEnv(gym.Env):
                 and invalid_move_reward < 0
             ), f"invalid_move_reward must be None or numeric and not negative. Got: {invalid_move_reward} (type: {type(invalid_move_reward)})"
         self.invalid_move_reward = invalid_move_reward
+        assert (
+            reward_mode in self.metadata["reward_modes"]
+        ), f"reward_mode must be one of {self.metadata['reward_modes']}. Got: {reward_mode}"
+        self.reward_mode = reward_mode
         self.circular_actions = circular_actions
         assert (
             type(blank_value) is int and blank_value <= 0
@@ -195,7 +201,7 @@ class SlidingEnv(gym.Env):
 
             if mode == "rgb_array":
                 img = np.array(self.fig.canvas.renderer._renderer)
-                img = Image.fromarray(img).convert('RGB')
+                img = Image.fromarray(img).convert("RGB")
                 img = img.resize(self.render_size)
                 return np.array(img, dtype=np.uint8)
         elif mode == "state":
@@ -237,24 +243,28 @@ class SlidingEnv(gym.Env):
         if not force_dense and self.sparse_rewards:
             return self.move_reward, False
 
-        total_distance = 0
-        for i in range(self.grid_size_h):
-            for j in range(self.grid_size_w):
-                value = self.state[i, j]
-                if value > 0:
-                    # Calculate goal position for the current value
-                    goal_y, goal_x = divmod(value - 1, self.grid_size_w)
-                    # Sum the Manhattan distances
-                    total_distance += abs(goal_y - i) + abs(goal_x - j)
+        if self.reward_mode == "distances":
+            total_distance = 0
+            for i in range(self.grid_size_h):
+                for j in range(self.grid_size_w):
+                    value = self.state[i, j]
+                    if value > 0:
+                        # Calculate goal position for the current value
+                        goal_y, goal_x = divmod(value - 1, self.grid_size_w)
+                        # Sum the Manhattan distances
+                        total_distance += abs(goal_y - i) + abs(goal_x - j)
 
-        # Normalize the reward
-        max_single_tile_distance = (self.grid_size_h - 1) + (self.grid_size_w - 1)
-        max_distance = max_single_tile_distance * (
-            self.grid_size_h * self.grid_size_w - 1
-        )
-        normalized_reward = -(total_distance / max_distance)
+            # Normalize the reward
+            max_single_tile_distance = (self.grid_size_h - 1) + (self.grid_size_w - 1)
+            max_distance = max_single_tile_distance * (
+                self.grid_size_h * self.grid_size_w - 1
+            )
+            reward = -(total_distance / max_distance)
+        else:
+            solved = np.arange(1, self.grid_size_h * self.grid_size_w)
+            reward = -np.mean(flat_state[:-1] != solved)
 
-        return normalized_reward, False
+        return reward, False
 
     def set_shuffled_puzzle(self):
         # Exclude the blank tile for shuffling
