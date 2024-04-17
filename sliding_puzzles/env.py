@@ -105,9 +105,18 @@ class SlidingEnv(gym.Env):
         self.last_done = False
 
         # Create an initial state with numbered tiles and one blank tile
-        self.state = np.arange(0, h * w).reshape(h, w)
-        self.blank_pos = (0, 0)
-        self.state[self.blank_pos] = self.blank_value
+
+        # Calculate the max distance each tile can be from its goal
+        self.total_max_distances = 0
+        for goal_y in range(self.grid_size_h):
+            for goal_x in range(self.grid_size_w):
+                if (goal_y, goal_x) == (self.grid_size_h - 1, self.grid_size_w - 1):
+                    # skip blank tile
+                    continue
+
+                self.total_max_distances += max(
+                    goal_y, (self.grid_size_h - 1) - goal_y
+                ) + max(goal_x, (self.grid_size_w - 1) - goal_x)
 
         # Initialize the plot
         if render_mode in ["human", "rgb_array"]:
@@ -255,11 +264,7 @@ class SlidingEnv(gym.Env):
                         total_distance += abs(goal_y - i) + abs(goal_x - j)
 
             # Normalize the reward
-            max_single_tile_distance = (self.grid_size_h - 1) + (self.grid_size_w - 1)
-            max_distance = max_single_tile_distance * (
-                self.grid_size_h * self.grid_size_w - 1
-            )
-            reward = -(total_distance / max_distance)
+            reward = -(total_distance / self.total_max_distances)
         else:
             solved = np.arange(1, self.grid_size_h * self.grid_size_w)
             reward = -np.mean(flat_state[:-1] != solved)
