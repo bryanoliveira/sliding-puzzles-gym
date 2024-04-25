@@ -44,5 +44,4 @@ def make(**env_config):
 gym.envs.register(
     id="SlidingPuzzle-v0",
     entry_point=make,
-    max_episode_steps=MAX_EPISODE_STEPS,
 )

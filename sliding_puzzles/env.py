@@ -36,6 +36,7 @@ class SlidingEnv(gym.Env):
         shuffle_steps: int = 100,
         shuffle_target_reward: Optional[float] = None,
         shuffle_render: bool = False,
+        max_episode_steps: Optional[int] = 1000,
         **kwargs,
     ):
         super().__init__()
@@ -105,6 +106,10 @@ class SlidingEnv(gym.Env):
         ), f"shuffle_target_reward must be None or a negative float. Got: {shuffle_target_reward} (type: {type(shuffle_target_reward)})"
         self.shuffle_target_reward = shuffle_target_reward
         self.shuffle_render = shuffle_render
+        assert (
+            max_episode_steps is None or max_episode_steps > 0
+        ), f"max_episode_steps must be a positive integer or None. Got: {max_episode_steps} (type: {type(max_episode_steps)})"
+        self.max_episode_steps = max_episode_steps
 
         # Define action and observation spaces
         self.observation_space = gym.spaces.Box(
@@ -122,6 +127,7 @@ class SlidingEnv(gym.Env):
         self.action = 4  # No action
         self.last_reward = self.move_reward
         self.last_done = False
+        self.steps = 0
 
         # Create an initial state with numbered tiles and one blank tile
         self.set_solved_puzzle()
@@ -197,15 +203,18 @@ class SlidingEnv(gym.Env):
 
         self.last_reward = reward
         self.last_done = done
+        if not force_dense_reward:
+            self.steps += 1
         return (
             self.state,
             reward,
             done,
-            False,
+            self.max_episode_steps and self.steps >= self.max_episode_steps,
             {"is_success": done, "state": self.state, "last_action": action},
         )
 
     def reset(self, options=None, seed=None):
+        self.steps = 0
         # Create an initial state with numbered tiles and one blank tile
         if self.shuffle_mode == "fast":
             self.set_shuffled_puzzle()
@@ -216,6 +225,7 @@ class SlidingEnv(gym.Env):
                 target_reward=self.shuffle_target_reward,
                 render=self.shuffle_render,
             )
+        print(self.steps)
         return self.state, {"is_success": False, "state": self.state}
 
     def render(self, mode=None):
@@ -340,7 +350,7 @@ class SlidingEnv(gym.Env):
 
         # If the puzzle is solved, execute a random action
         if self.calculate_reward()[0] == self.win_reward:
-            self.step(np.random.choice(self.valid_actions()))
+            self.step(np.random.choice(self.valid_actions()), force_dense_reward=True)
 
     def valid_actions(self):
         y, x = self.blank_pos
