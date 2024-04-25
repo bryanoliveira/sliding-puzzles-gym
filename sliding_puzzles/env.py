@@ -16,6 +16,7 @@ class SlidingEnv(gym.Env):
         "render.modes": ["state", "human", "rgb_array"],
         "reward_modes": ["distances", "percent_solved"],
         "shuffle_modes": ["fast", "serial"],
+        "render_fps": 10,
     }
 
     def __init__(
