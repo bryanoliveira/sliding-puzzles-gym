@@ -225,7 +225,6 @@ class SlidingEnv(gym.Env):
                 target_reward=self.shuffle_target_reward,
                 render=self.shuffle_render,
             )
-        print(self.steps)
         return self.state, {"is_success": False, "state": self.state}
 
     def render(self, mode=None):
