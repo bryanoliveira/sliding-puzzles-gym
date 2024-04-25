@@ -26,8 +26,8 @@ class SlidingEnv(gym.Env):
         render_size: tuple = (32, 32),  # W x H
         sparse_rewards: bool = False,
         win_reward: float = 10,
-        move_reward: float = 0,
-        invalid_move_reward: Optional[float] = None,
+        move_reward: float = -0.1,
+        invalid_move_reward: Optional[float] = -1,
         circular_actions: bool = False,
         blank_value: int = -1,
         reward_mode: str = "distances",
