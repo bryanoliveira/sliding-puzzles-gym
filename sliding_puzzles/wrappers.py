@@ -64,7 +64,7 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
         self,
         env,
         image_folder="single",
-        image_size=(128, 128),  # width x height
+        image_size=(84, 84),  # width x height
         background_color_rgb=(0, 0, 0),
         normalize=True,
         **kwargs
