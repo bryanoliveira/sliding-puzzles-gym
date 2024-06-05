@@ -34,7 +34,7 @@ def make(**env_config):
     elif EnvType(env_config["variation"]) is EnvType.image:
         assert "image_folder" in env_config, "image_folder must be specified in config"
 
-        env = wrappers.ImagePuzzleWrapper(
+        env = wrappers.ImageFolderWrapper(
             env,
             **env_config,
         )

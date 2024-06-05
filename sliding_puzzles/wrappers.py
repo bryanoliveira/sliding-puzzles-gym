@@ -59,21 +59,24 @@ class OneHotEncodingWrapper(gym.ObservationWrapper):
         return one_hot_encoded
 
 
-class ImagePuzzleWrapper(gym.ObservationWrapper):
+class ExponentialRewardWrapper(gym.RewardWrapper):
+    def __init__(self, env, **kwargs):
+        super().__init__(env)
+
+    def reward(self, reward):
+        return np.exp(reward)
+
+
+class BaseImageWrapper(gym.ObservationWrapper):
     def __init__(
         self,
         env,
-        image_folder="single",
         image_size=(84, 84),  # width x height
         background_color_rgb=(0, 0, 0),
         normalize=False,
         **kwargs
     ):
         super().__init__(env)
-        if not os.path.isabs(image_folder):
-            base_dir = os.path.dirname(__file__)
-            image_folder = os.path.join(base_dir, "../imgs", image_folder)
-        self.image_folder = image_folder
         self.image_size = image_size
         self.background_color_rgb = background_color_rgb
         self.normalize = normalize
@@ -90,15 +93,14 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
         )
 
     def reset(self, **kwargs):
-        self.load_random_image()
+        image = self.load_random_image()
+        self.set_split_image(image)
         return super().reset(**kwargs)
 
     def load_random_image(self):
-        # load image
-        images = os.listdir(self.image_folder)
-        random_image_path = os.path.join(self.image_folder, random.choice(images))
-        image = Image.open(random_image_path).resize(self.image_size)
+        raise NotImplementedError
 
+    def set_split_image(self, image):
         # split image
         self.image_sections = []
         for i in range(self.env.unwrapped.grid_size_h):
@@ -152,9 +154,24 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
         self.env.unwrapped.setup_render_controls(self)
 
 
-class ExponentialRewardWrapper(gym.RewardWrapper):
-    def __init__(self, env, **kwargs):
-        super().__init__(env)
+class ImageFolderWrapper(BaseImageWrapper):
+    def __init__(self, env, image_folder="single", image_pool_size=None, **kwargs):
+        super().__init__(env, **kwargs)
+        if os.path.isabs(image_folder):
+            self.image_folder = image_folder
+        else:
+            base_dir = os.path.dirname(__file__)
+            self.image_folder = os.path.join(base_dir, "../imgs", image_folder)
 
-    def reward(self, reward):
-        return np.exp(reward)
+        all_images = os.listdir(self.image_folder)
+        if image_pool_size is None:
+            image_pool_size = 1 if image_folder == "single" else len(all_images)
+            print(f"Inferring image pool size from folder {image_folder}: {image_pool_size}")
+        self.images = random.sample(all_images, image_pool_size)
+
+    def load_random_image(self):
+        # load image
+        random_image_path = os.path.join(self.image_folder, random.choice(self.images))
+        image = Image.open(random_image_path).resize(self.image_size)
+        return image
+
