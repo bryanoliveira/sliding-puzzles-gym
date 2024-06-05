@@ -66,7 +66,7 @@ class ImagePuzzleWrapper(gym.ObservationWrapper):
         image_folder="single",
         image_size=(84, 84),  # width x height
         background_color_rgb=(0, 0, 0),
-        normalize=True,
+        normalize=False,
         **kwargs
     ):
         super().__init__(env)
