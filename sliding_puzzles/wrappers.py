@@ -2,16 +2,9 @@ import math
 import os
 import random
 
+import gymnasium as gym
 import numpy as np
 from PIL import Image
-
-try:
-    import gymnasium as gym
-except ImportError:
-    try:
-        import gym
-    except ImportError:
-        raise ImportError("gymnasium (or at least gym must) be installed")
 
 
 class NormalizedObsWrapper(gym.ObservationWrapper):
@@ -82,7 +75,7 @@ class BaseImageWrapper(gym.ObservationWrapper):
         background_color_rgb=(0, 0, 0),
         **kwargs,
     ):
-        super().__init__(env, new_step_api=not env.using_old_gym_api)
+        super().__init__(env)
         self.image_size = image_size
         self.background_color_rgb = background_color_rgb
         self.section_size = (

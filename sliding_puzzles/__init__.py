@@ -1,6 +1,7 @@
 from enum import Enum
 import random
 
+import gymnasium as gym
 import numpy as np
 from sliding_puzzles.env import SlidingEnv
 from sliding_puzzles import wrappers
@@ -42,14 +43,6 @@ def make(**env_config):
         )
     return env
 
-
-try:
-    import gymnasium as gym
-except ImportError:
-    try:
-        import gym
-    except ImportError:
-        raise ImportError("gymnasium (or at least gym) must be installed")
 
 gym.envs.register(
     id="SlidingPuzzle-v0",

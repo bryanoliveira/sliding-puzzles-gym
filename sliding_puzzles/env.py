@@ -1,23 +1,11 @@
 import random
 from typing import Optional
 
+import gymnasium as gym
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from PIL import Image
-
-OLD_GYM_API = False
-
-try:
-    import gymnasium as gym
-except ImportError:
-    try:
-        import gym
-
-        if getattr(gym, "__version__", None) and gym.__version__ < "0.25":
-            OLD_GYM_API = True
-    except ImportError:
-        raise ImportError("gymnasium (or at least gym) must be installed")
 
 from sliding_puzzles.utils import count_inversions, is_solvable, inverse_action
 
@@ -124,8 +112,6 @@ class SlidingEnv(gym.Env):
         ), f"max_episode_steps must be a positive integer or None. Got: {max_episode_steps} (type: {type(max_episode_steps)})"
         self.max_episode_steps = max_episode_steps
 
-        self.using_old_gym_api = OLD_GYM_API
-
         # Define action and observation spaces
         self.observation_space = gym.spaces.Box(
             low=min(blank_value, 0), high=h * w, shape=(h, w), dtype=np.int32
@@ -223,11 +209,7 @@ class SlidingEnv(gym.Env):
         
         truncated = self.max_episode_steps and self.steps >= self.max_episode_steps
         info = {"is_success": terminated, "state": self.state, "last_action": action}
-        if OLD_GYM_API:
-            print("old api")
-            return self.state, reward, terminated or truncated, info
-        else:
-            return self.state, reward, terminated, truncated, info
+        return self.state, reward, terminated, truncated, info
 
     def reset(self, options=None, seed=None):
         self.steps = 0
@@ -241,12 +223,7 @@ class SlidingEnv(gym.Env):
                 target_reward=self.shuffle_target_reward,
                 render=self.shuffle_render,
             )
-
-        if OLD_GYM_API:
-            print("old api")
-            return self.state
-        else:
-            return self.state, {"is_success": False, "state": self.state}
+        return self.state, {"is_success": False, "state": self.state}
 
     def render(self, mode=None):
         if mode is None:
