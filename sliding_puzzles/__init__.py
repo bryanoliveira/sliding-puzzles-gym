@@ -1,13 +1,9 @@
 from enum import Enum
 import random
 
-import gymnasium as gym
 import numpy as np
 from sliding_puzzles.env import SlidingEnv
 from sliding_puzzles import wrappers
-
-
-MAX_EPISODE_STEPS = 1000
 
 
 class EnvType(Enum):
@@ -15,6 +11,7 @@ class EnvType(Enum):
     image = "image"
     normalized = "normalized"
     onehot = "onehot"
+    imagenet = "imagenet"
 
 
 def make(**env_config):
@@ -23,7 +20,7 @@ def make(**env_config):
         np.random.seed(seed)
         random.seed(seed)
 
-    env = SlidingEnv(**env_config)    
+    env = SlidingEnv(**env_config)
 
     if "variation" not in env_config or EnvType(env_config["variation"]) is EnvType.raw:
         pass
@@ -38,8 +35,21 @@ def make(**env_config):
             env,
             **env_config,
         )
+    elif EnvType(env_config["variation"]) is EnvType.imagenet:
+        env = wrappers.ImagenetWrapper(
+            env,
+            **env_config,
+        )
     return env
 
+
+try:
+    import gymnasium as gym
+except ImportError:
+    try:
+        import gym
+    except ImportError:
+        raise ImportError("gymnasium (or at least gym) must be installed")
 
 gym.envs.register(
     id="SlidingPuzzle-v0",

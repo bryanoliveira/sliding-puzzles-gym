@@ -2,9 +2,16 @@ import math
 import os
 import random
 
-import gymnasium as gym
 import numpy as np
 from PIL import Image
+
+try:
+    import gymnasium as gym
+except ImportError:
+    try:
+        import gym
+    except ImportError:
+        raise ImportError("gymnasium (or at least gym must) be installed")
 
 
 class NormalizedObsWrapper(gym.ObservationWrapper):
@@ -73,13 +80,11 @@ class BaseImageWrapper(gym.ObservationWrapper):
         env,
         image_size=(84, 84),  # width x height
         background_color_rgb=(0, 0, 0),
-        normalize=False,
-        **kwargs
+        **kwargs,
     ):
-        super().__init__(env)
+        super().__init__(env, new_step_api=not env.using_old_gym_api)
         self.image_size = image_size
         self.background_color_rgb = background_color_rgb
-        self.normalize = normalize
         self.section_size = (
             math.ceil(image_size[0] / self.env.unwrapped.grid_size_w),
             math.ceil(image_size[1] / self.env.unwrapped.grid_size_h),
@@ -89,7 +94,7 @@ class BaseImageWrapper(gym.ObservationWrapper):
             low=0,
             high=255,
             shape=tuple(self.image_size[::-1]) + (3,),  # height x width channels
-            dtype=np.float32 if self.normalize else np.uint8,
+            dtype=np.uint8,
         )
 
     def reset(self, **kwargs):
@@ -113,9 +118,10 @@ class BaseImageWrapper(gym.ObservationWrapper):
                 section = section.resize(self.section_size)
                 self.image_sections.append(section)
 
-    def observation(self, obs, skip_normalization=False):
+    def observation(self, obs):
         new_image = Image.new("RGB", self.image_size, self.background_color_rgb)
         # paint tiles
+        print(obs)
         for i in range(self.env.unwrapped.grid_size_h):
             for j in range(self.env.unwrapped.grid_size_w):
                 section_idx = obs[i, j]
@@ -125,9 +131,6 @@ class BaseImageWrapper(gym.ObservationWrapper):
                         section, (j * self.section_size[0], i * self.section_size[1])
                     )
 
-        if not skip_normalization and self.normalize:
-            return np.array(new_image, dtype=np.float32) / 255
-
         return np.array(new_image, dtype=np.uint8)
 
     def render(self, mode=None):
@@ -136,7 +139,7 @@ class BaseImageWrapper(gym.ObservationWrapper):
 
         if mode in ["human", "rgb_array"]:
             current_obs = self.env.unwrapped.state
-            img_obs = self.observation(current_obs, skip_normalization=True)
+            img_obs = self.observation(current_obs)
 
             if mode == "rgb_array":
                 return img_obs
@@ -166,7 +169,9 @@ class ImageFolderWrapper(BaseImageWrapper):
         all_images = os.listdir(self.image_folder)
         if image_pool_size is None:
             image_pool_size = 1 if image_folder == "single" else len(all_images)
-            print(f"Inferring image pool size from folder {image_folder}: {image_pool_size}")
+            print(
+                f"Inferring image pool size from folder {image_folder}: {image_pool_size}"
+            )
         self.images = random.sample(all_images, image_pool_size)
 
     def load_random_image(self):
@@ -175,3 +180,70 @@ class ImageFolderWrapper(BaseImageWrapper):
         image = Image.open(random_image_path).resize(self.image_size)
         return image
 
+
+class ChannelFirstImageWrapper(gym.ObservationWrapper):
+    def __init__(self, env, **kwargs):
+        super().__init__(env)
+        assert len(env.observation_space.shape) == 3, f"{env.observation_space.shape}"
+        assert env.observation_space.dtype == np.uint8, f"{env.observation_space.dtype}"
+        channel_first_shape = sorted(env.observation_space.shape)
+        self.should_transpose = channel_first_shape != env.observation_space.shape
+
+        self.observation_space = gym.spaces.Box(
+            low=0,
+            high=255,
+            shape=channel_first_shape,
+            dtype=np.uint8,
+        )
+
+    def observation(self, obs):
+        if self.should_transpose:
+            return obs.transpose(2, 0, 1)
+        return obs
+
+
+class NormalizedImageWrapper(gym.ObservationWrapper):
+    def __init__(self, env, **kwargs):
+        super().__init__(env)
+        self.observation_space = gym.spaces.Box(
+            low=0,
+            high=1,
+            shape=env.observation_space.shape,
+            dtype=np.float32,
+        )
+
+    def observation(self, obs):
+        return np.array(obs, dtype=np.float32) / 255.0
+
+
+class ImagenetWrapper(BaseImageWrapper):
+    def __init__(self, env, image_class_name=None, image_pool_size=2, **kwargs):
+        super().__init__(env, **kwargs)
+
+        from datasets import load_dataset
+
+        dataset = load_dataset("imagenet-1k")
+        if image_class_name is None:
+            image_class_name = random.choice(
+                dataset["validation"].features["label"].names
+            )
+
+        from tqdm import tqdm
+
+        class_id = dataset["validation"].features["label"].names.index(image_class_name)
+        print(f"Filtering images for class {image_class_name} ({class_id})")
+
+        self.images = []
+        for image, label in tqdm(
+            zip(dataset["validation"]["image"], dataset["validation"]["label"]),
+            desc="Filtering images",
+        ):
+            if label == class_id:
+                self.images.append(image)
+                if len(self.images) >= image_pool_size:
+                    break
+
+        print(f"Found {len(self.images)} images for class {image_class_name}")
+
+    def load_random_image(self):
+        return self.images[random.randint(0, len(self.images) - 1)]

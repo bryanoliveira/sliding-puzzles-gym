@@ -1,10 +1,23 @@
 import random
 from typing import Optional
-import gymnasium as gym
+
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from PIL import Image
+
+OLD_GYM_API = False
+
+try:
+    import gymnasium as gym
+except ImportError:
+    try:
+        import gym
+
+        if getattr(gym, "__version__", None) and gym.__version__ < "0.25":
+            OLD_GYM_API = True
+    except ImportError:
+        raise ImportError("gymnasium (or at least gym) must be installed")
 
 from sliding_puzzles.utils import count_inversions, is_solvable, inverse_action
 
@@ -111,6 +124,8 @@ class SlidingEnv(gym.Env):
         ), f"max_episode_steps must be a positive integer or None. Got: {max_episode_steps} (type: {type(max_episode_steps)})"
         self.max_episode_steps = max_episode_steps
 
+        self.using_old_gym_api = OLD_GYM_API
+
         # Define action and observation spaces
         self.observation_space = gym.spaces.Box(
             low=min(blank_value, 0), high=h * w, shape=(h, w), dtype=np.int32
@@ -126,7 +141,7 @@ class SlidingEnv(gym.Env):
         # Initializations
         self.action = 4  # No action
         self.last_reward = self.move_reward
-        self.last_done = False
+        self.last_terminated = False
         self.steps = 0
 
         # Create an initial state with numbered tiles and one blank tile
@@ -195,23 +210,24 @@ class SlidingEnv(gym.Env):
                 self.state[y, x],
             )
             self.blank_pos = new_pos
-            reward, done = self.calculate_reward(force_dense=force_dense_reward)
+            reward, terminated = self.calculate_reward(force_dense=force_dense_reward)
         elif self.invalid_move_reward is not None:
-            reward, done = self.invalid_move_reward, self.last_done
+            reward, terminated = self.invalid_move_reward, self.last_terminated
         else:
-            reward, done = self.last_reward, self.last_done
+            reward, terminated = self.last_reward, self.last_terminated
 
         self.last_reward = reward
-        self.last_done = done
+        self.last_terminated = terminated
         if not force_dense_reward:
             self.steps += 1
-        return (
-            self.state,
-            reward,
-            done,
-            self.max_episode_steps and self.steps >= self.max_episode_steps,
-            {"is_success": done, "state": self.state, "last_action": action},
-        )
+        
+        truncated = self.max_episode_steps and self.steps >= self.max_episode_steps
+        info = {"is_success": terminated, "state": self.state, "last_action": action}
+        if OLD_GYM_API:
+            print("old api")
+            return self.state, reward, terminated or truncated, info
+        else:
+            return self.state, reward, terminated, truncated, info
 
     def reset(self, options=None, seed=None):
         self.steps = 0
@@ -225,7 +241,12 @@ class SlidingEnv(gym.Env):
                 target_reward=self.shuffle_target_reward,
                 render=self.shuffle_render,
             )
-        return self.state, {"is_success": False, "state": self.state}
+
+        if OLD_GYM_API:
+            print("old api")
+            return self.state
+        else:
+            return self.state, {"is_success": False, "state": self.state}
 
     def render(self, mode=None):
         if mode is None:
@@ -425,7 +446,8 @@ if __name__ == "__main__":
 
             # action = np.random.choice(env.valid_actions())  # Choose a random action
             action = None
-            observation, reward, done, trunc, info = env.step(action)  # Take a step
+            observation, reward, terminated, truncated, info = env.step(action)  # Take a step
+            done = terminated or truncated
             if info["last_action"] < 4:
                 print("reward:", reward)
 

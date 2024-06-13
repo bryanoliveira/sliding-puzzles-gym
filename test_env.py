@@ -2,8 +2,9 @@ import numpy as np
 import sliding_puzzles
 
 env = sliding_puzzles.make(
+    seed=42,
     render_mode="human",
-    w=3,
+    w=4,
     # circular_actions=True,
 
     # sparse_rewards=True,
@@ -11,13 +12,20 @@ env = sliding_puzzles.make(
     win_reward=10,
     # move_reward=-1,
     # invalid_move_reward=-10,
+    # reward_mode = "percent_solved",
+    shuffle_mode="serial",
+    shuffle_steps=1000,
+    # shuffle_target_reward=-0.7,
+    # shuffle_render=True,
 
-    variation=["raw", "onehot", "image"][2],
+    variation=["raw", "onehot", "image", "imagenet"][2],
     image_folder=[
-        "/mnt/data/Documents/sliding-puzzle/imgs/single",
-        "/mnt/data/Documents/sliding-puzzle/imgs/mnist",
-        "/mnt/data/Documents/sliding-puzzle/imgs/imagenet-1k",
+        "single",
+        "mnist",
+        "imagenet-1k",
     ][2],
+    image_pool_size=4,
+    image_class_name='Chihuahua',
     # background_color_rgb=(255, 0, 0)
     # image_size=(210, 160),
 )
