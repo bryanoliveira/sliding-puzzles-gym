@@ -114,7 +114,6 @@ class BaseImageWrapper(gym.ObservationWrapper):
     def observation(self, obs):
         new_image = Image.new("RGB", self.image_size, self.background_color_rgb)
         # paint tiles
-        print(obs)
         for i in range(self.env.unwrapped.grid_size_h):
             for j in range(self.env.unwrapped.grid_size_w):
                 section_idx = obs[i, j]
