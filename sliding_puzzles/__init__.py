@@ -7,14 +7,12 @@ from sliding_puzzles.env import SlidingEnv
 from sliding_puzzles import wrappers
 
 
-MAX_EPISODE_STEPS = 1000
-
-
 class EnvType(Enum):
     raw = "raw"
     image = "image"
     normalized = "normalized"
     onehot = "onehot"
+    imagenet = "imagenet"
 
 
 def make(**env_config):
@@ -23,7 +21,7 @@ def make(**env_config):
         np.random.seed(seed)
         random.seed(seed)
 
-    env = SlidingEnv(**env_config)    
+    env = SlidingEnv(**env_config)
 
     if "variation" not in env_config or EnvType(env_config["variation"]) is EnvType.raw:
         pass
@@ -35,6 +33,11 @@ def make(**env_config):
         assert "image_folder" in env_config, "image_folder must be specified in config"
 
         env = wrappers.ImageFolderWrapper(
+            env,
+            **env_config,
+        )
+    elif EnvType(env_config["variation"]) is EnvType.imagenet:
+        env = wrappers.ImagenetWrapper(
             env,
             **env_config,
         )

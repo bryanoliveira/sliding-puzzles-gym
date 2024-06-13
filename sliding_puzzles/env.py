@@ -1,5 +1,6 @@
 import random
 from typing import Optional
+
 import gymnasium as gym
 import numpy as np
 import matplotlib.pyplot as plt
@@ -126,7 +127,7 @@ class SlidingEnv(gym.Env):
         # Initializations
         self.action = 4  # No action
         self.last_reward = self.move_reward
-        self.last_done = False
+        self.last_terminated = False
         self.steps = 0
 
         # Create an initial state with numbered tiles and one blank tile
@@ -195,23 +196,20 @@ class SlidingEnv(gym.Env):
                 self.state[y, x],
             )
             self.blank_pos = new_pos
-            reward, done = self.calculate_reward(force_dense=force_dense_reward)
+            reward, terminated = self.calculate_reward(force_dense=force_dense_reward)
         elif self.invalid_move_reward is not None:
-            reward, done = self.invalid_move_reward, self.last_done
+            reward, terminated = self.invalid_move_reward, self.last_terminated
         else:
-            reward, done = self.last_reward, self.last_done
+            reward, terminated = self.last_reward, self.last_terminated
 
         self.last_reward = reward
-        self.last_done = done
+        self.last_terminated = terminated
         if not force_dense_reward:
             self.steps += 1
-        return (
-            self.state,
-            reward,
-            done,
-            self.max_episode_steps and self.steps >= self.max_episode_steps,
-            {"is_success": done, "state": self.state, "last_action": action},
-        )
+        
+        truncated = self.max_episode_steps and self.steps >= self.max_episode_steps
+        info = {"is_success": terminated, "state": self.state, "last_action": action}
+        return self.state, reward, terminated, truncated, info
 
     def reset(self, options=None, seed=None):
         self.steps = 0
@@ -425,7 +423,8 @@ if __name__ == "__main__":
 
             # action = np.random.choice(env.valid_actions())  # Choose a random action
             action = None
-            observation, reward, done, trunc, info = env.step(action)  # Take a step
+            observation, reward, terminated, truncated, info = env.step(action)  # Take a step
+            done = terminated or truncated
             if info["last_action"] < 4:
                 print("reward:", reward)
 
