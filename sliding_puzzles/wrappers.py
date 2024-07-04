@@ -89,6 +89,7 @@ class BaseImageWrapper(gym.ObservationWrapper):
             shape=tuple(self.image_size[::-1]) + (3,),  # height x width channels
             dtype=np.uint8,
         )
+        self.env.unwrapped.render = self.render
 
     def reset(self, **kwargs):
         image = self.load_random_image()
@@ -164,7 +165,9 @@ class ImageFolderWrapper(BaseImageWrapper):
             print(
                 f"Inferring image pool size from folder {image_folder}: {image_pool_size}"
             )
-        self.images = random.sample(all_images, image_pool_size)
+
+        rng = random.Random(self.env.unwrapped.seed)
+        self.images = rng.sample(all_images, image_pool_size)
 
     def load_random_image(self):
         # load image
@@ -216,7 +219,8 @@ class ImagenetWrapper(BaseImageWrapper):
 
         dataset = load_dataset("imagenet-1k")
         if image_class_name is None:
-            image_class_name = random.choice(
+            rng = random.Random(self.env.unwrapped.seed)
+            image_class_name = rng.choice(
                 dataset["validation"].features["label"].names
             )
 

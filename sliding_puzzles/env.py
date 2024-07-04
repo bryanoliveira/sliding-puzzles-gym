@@ -38,6 +38,7 @@ class SlidingEnv(gym.Env):
         shuffle_target_reward: Optional[float] = None,
         shuffle_render: bool = False,
         max_episode_steps: Optional[int] = 1000,
+        seed: Optional[int] = None,
         **kwargs,
     ):
         super().__init__()
@@ -111,6 +112,7 @@ class SlidingEnv(gym.Env):
             max_episode_steps is None or max_episode_steps > 0
         ), f"max_episode_steps must be a positive integer or None. Got: {max_episode_steps} (type: {type(max_episode_steps)})"
         self.max_episode_steps = max_episode_steps
+        self.seed = seed if seed else random.randint(1, 1000000)
 
         # Define action and observation spaces
         self.observation_space = gym.spaces.Box(
@@ -209,6 +211,10 @@ class SlidingEnv(gym.Env):
         
         truncated = self.max_episode_steps and self.steps >= self.max_episode_steps
         info = {"is_success": terminated, "state": self.state, "last_action": action}
+
+        if self.render_mode == "human":
+            self.render()
+
         return self.state, reward, terminated, truncated, info
 
     def reset(self, options=None, seed=None):
@@ -223,6 +229,10 @@ class SlidingEnv(gym.Env):
                 target_reward=self.shuffle_target_reward,
                 render=self.shuffle_render,
             )
+
+        if self.render_mode == "human":
+            self.render()
+
         return self.state, {"is_success": False, "state": self.state}
 
     def render(self, mode=None):
