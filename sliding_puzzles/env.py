@@ -100,8 +100,8 @@ class SlidingEnv(gym.Env):
         ), f"shuffle_mode must be one of {self.metadata['shuffle_modes']}. Got: {shuffle_mode}"
         self.shuffle_mode = shuffle_mode
         assert type(shuffle_steps) is int and (
-            shuffle_mode == "fast" or shuffle_steps > 0
-        ), f"shuffle_steps must be a positive integer. Got: {shuffle_steps} (type: {type(shuffle_steps)})"
+            shuffle_mode == "fast" or shuffle_steps >= 0
+        ), f"shuffle_steps must be a non-zero integer. Got: {shuffle_steps} (type: {type(shuffle_steps)})"
         self.shuffle_steps = shuffle_steps
         assert shuffle_target_reward is None or (
             type(shuffle_target_reward) is float and shuffle_target_reward < 0
@@ -112,7 +112,7 @@ class SlidingEnv(gym.Env):
             max_episode_steps is None or max_episode_steps > 0
         ), f"max_episode_steps must be a positive integer or None. Got: {max_episode_steps} (type: {type(max_episode_steps)})"
         self.max_episode_steps = max_episode_steps
-        self.seed = seed if seed else random.randint(1, 1000000)
+        self.seed = int(seed) if seed else random.randint(1, 1000000)
 
         # Define action and observation spaces
         self.observation_space = gym.spaces.Box(
@@ -379,6 +379,9 @@ class SlidingEnv(gym.Env):
     def shuffle_serial(self, steps=1000, render=False, target_reward=None):
         if render:
             print("Shuffling the puzzle...")
+
+        if steps == 0:
+            return
 
         undo_action = None
         r = 0

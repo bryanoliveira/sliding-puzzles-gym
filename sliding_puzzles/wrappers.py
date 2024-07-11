@@ -151,7 +151,14 @@ class BaseImageWrapper(gym.ObservationWrapper):
 
 
 class ImageFolderWrapper(BaseImageWrapper):
-    def __init__(self, env, image_folder="single", image_pool_size=None, **kwargs):
+    def __init__(
+        self,
+        env,
+        image_folder: str = "single",
+        image_pool_size: int = None,
+        image_pool_seed: int = None,
+        **kwargs,
+    ):
         super().__init__(env, **kwargs)
         if os.path.isabs(image_folder):
             self.image_folder = image_folder
@@ -165,9 +172,22 @@ class ImageFolderWrapper(BaseImageWrapper):
             print(
                 f"Inferring image pool size from folder {image_folder}: {image_pool_size}"
             )
+        else:
+            image_pool_size = int(image_pool_size)
 
-        rng = random.Random(self.env.unwrapped.seed)
-        self.images = rng.sample(all_images, image_pool_size)
+        if image_pool_size > len(all_images):
+            print(
+                f"WARNING: Image pool size {image_pool_size} is greater "
+                f"than the number of images in the folder {self.image_folder}. "
+                f"Reducing to {len(all_images)}"
+            )
+            image_pool_size = len(all_images)
+
+        if image_pool_seed is None:
+            image_pool_seed = self.env.unwrapped.seed
+
+        rng = random.Random(image_pool_seed)
+        self.images = rng.sample(all_images, int(image_pool_size))
 
     def load_random_image(self):
         # load image
@@ -220,9 +240,7 @@ class ImagenetWrapper(BaseImageWrapper):
         dataset = load_dataset("imagenet-1k")
         if image_class_name is None:
             rng = random.Random(self.env.unwrapped.seed)
-            image_class_name = rng.choice(
-                dataset["validation"].features["label"].names
-            )
+            image_class_name = rng.choice(dataset["validation"].features["label"].names)
 
         from tqdm import tqdm
 
