@@ -20,11 +20,11 @@ env = sliding_puzzles.make(
 
     variation=["raw", "onehot", "image", "imagenet"][2],
     image_folder=[
-        "single",
+        "test",
         "mnist",
         "imagenet-1k",
-    ][2],
-    image_pool_size=4,
+    ][0],
+    image_pool_size=1,
     image_class_name='Chihuahua',
     # background_color_rgb=(255, 0, 0)
     # image_size=(210, 160),
