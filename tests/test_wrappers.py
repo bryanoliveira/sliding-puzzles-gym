@@ -20,7 +20,7 @@ class TestSlidingEnvWrappers(unittest.TestCase):
 
         with open("test.pkl", "rb") as f:
             env2 = pickle.load(f)
-        self.assertEqual(env1.state.tolist(), env2.state.tolist())
+        self.assertEqual(env1.unwrapped.state.tolist(), env2.unwrapped.state.tolist())
         env1.close()
         env2.close()
 

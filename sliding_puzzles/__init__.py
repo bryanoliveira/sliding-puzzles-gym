@@ -12,7 +12,6 @@ class EnvType(Enum):
     image = "image"
     normalized = "normalized"
     onehot = "onehot"
-    imagenet = "imagenet"
 
 
 def make(**env_config):
@@ -33,11 +32,6 @@ def make(**env_config):
         assert "image_folder" in env_config, "image_folder must be specified in config"
 
         env = wrappers.ImageFolderWrapper(
-            env,
-            **env_config,
-        )
-    elif EnvType(env_config["variation"]) is EnvType.imagenet:
-        env = wrappers.ImagenetWrapper(
             env,
             **env_config,
         )

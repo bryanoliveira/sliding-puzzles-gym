@@ -1,2 +1,4 @@
-gymnasium<0.30
-matplotlib<4
+gymnasium  # tested with 0.28.1
+matplotlib  # tested with 3.5.3
+numpy  # tested with 1.24.4
+Pillow  # tested with 9.5.0

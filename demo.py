@@ -2,32 +2,32 @@ import numpy as np
 import sliding_puzzles
 
 env = sliding_puzzles.make(
-    seed=42,
+    seed=2,
     render_mode="human",
-    w=4,
+    w=3,
     # circular_actions=True,
 
     # sparse_rewards=True,
     # sparse_mode="win",
-    win_reward=10,
+    # win_reward=10,
     # move_reward=-1,
     # invalid_move_reward=-10,
     # reward_mode = "percent_solved",
-    shuffle_mode="serial",
-    shuffle_steps=1000,
+
     # shuffle_target_reward=-0.7,
     # shuffle_render=True,
+    # shuffle_mode="serial",
+    # shuffle_steps=0,
 
-    variation=["raw", "onehot", "image", "imagenet"][2],
+    variation=["raw", "onehot", "image"][2],
     image_folder=[
         "test",
         "mnist",
         "imagenet-1k",
     ][0],
-    image_pool_size=1,
-    image_class_name='Chihuahua',
+    image_pool_size=3,
     # background_color_rgb=(255, 0, 0)
-    # image_size=(210, 160),
+    image_size=(1024, 1024),
 )
 env.setup_render_controls()
 obs, info = env.reset()
@@ -47,5 +47,3 @@ while True:
             print("Done!", info)
             print("Total reward:", total_reward)
             print("Press r to reset")
-
-env.close()

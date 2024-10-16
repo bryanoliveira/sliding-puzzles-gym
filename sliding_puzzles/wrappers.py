@@ -229,35 +229,3 @@ class NormalizedImageWrapper(gym.ObservationWrapper):
 
     def observation(self, obs):
         return np.array(obs, dtype=np.float32) / 255.0
-
-
-class ImagenetWrapper(BaseImageWrapper):
-    def __init__(self, env, image_class_name=None, image_pool_size=2, **kwargs):
-        super().__init__(env, **kwargs)
-
-        from datasets import load_dataset
-
-        dataset = load_dataset("imagenet-1k")
-        if image_class_name is None:
-            rng = random.Random(self.env.unwrapped.seed)
-            image_class_name = rng.choice(dataset["validation"].features["label"].names)
-
-        from tqdm import tqdm
-
-        class_id = dataset["validation"].features["label"].names.index(image_class_name)
-        print(f"Filtering images for class {image_class_name} ({class_id})")
-
-        self.images = []
-        for image, label in tqdm(
-            zip(dataset["validation"]["image"], dataset["validation"]["label"]),
-            desc="Filtering images",
-        ):
-            if label == class_id:
-                self.images.append(image)
-                if len(self.images) >= image_pool_size:
-                    break
-
-        print(f"Found {len(self.images)} images for class {image_class_name}")
-
-    def load_random_image(self):
-        return self.images[random.randint(0, len(self.images) - 1)]
