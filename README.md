@@ -1,12 +1,12 @@
 # Sliding Puzzles Gym Environment
 
-<p align="center">
+<div align="center">
   <img src="docs/example1.gif" width="30%" alt="Example 1">
   <img src="docs/example2.gif" width="30%" alt="Example 2">
   <img src="docs/example3.gif" width="30%" alt="Example 4">
-</p>
-
-
+  <br>
+  <small>A PPO agent solving the environment.</small>
+</div>
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -20,10 +20,11 @@
 ## Introduction
 
 ![Sliding Puzzle Diagram](docs/diagram.png)
+> <b>Overview of the Sliding Puzzles Gym (SPGym).</b> The framework extends the 15-tile puzzle by incorporating image-based tiles, allowing scalable representation complexity while maintaining fixed environment dynamics.
 
-The Sliding Puzzles Gym is a customizable Gymnasium-compatible environment designed for training and evaluating reinforcement learning algorithms on sliding puzzle tasks. This environment, as described in our recent paper [Sliding Puzzles Gym: A Scalable Benchmark for State Representation in Visual Reinforcement Learning](), serves as a benchmark for assessing the representation learning capabilities of various RL algorithms.
+The Sliding Puzzles Gym (SPGym) is a customizable Gymnasium-compatible environment designed for training and evaluating reinforcement learning algorithms on sliding puzzle tasks. This environment, as described in our recent paper [Sliding Puzzles Gym: A Scalable Benchmark for State Representation in Visual Reinforcement Learning](), serves as a benchmark for assessing the representation learning capabilities of various RL algorithms. The code for reproducing the paper results can be found [here](https://github.com/bryanoliveira/spgym-experiments).
 
-Our research demonstrates how sliding puzzles can be used to evaluate an RL agent's ability to learn and utilize spatial relationships and abstract problem-solving skills. The environment supports various puzzle sizes, image-based puzzles, and different rendering modes, allowing for a comprehensive analysis of algorithm performance across different complexity levels and input modalities.
+Our research demonstrates how sliding puzzles can be used to evaluate an RL agent's ability to learn and utilize spatial relationships and compositional visual representations. The environment supports various puzzle sizes, image-based puzzles, and different rendering modes, allowing for a comprehensive analysis of algorithm performance across different complexity levels and input modalities. Crucially, the visual complexity of the task can be controlled via the `image_pool_size` parameter, which defines how many different images the agent will see during training.
 
 By using this environment, researchers can:
 1. Compare the effectiveness of different RL algorithms in learning useful state representations
@@ -34,7 +35,7 @@ We encourage the use of this environment for further research in representation 
 
 ## Installation
 
-To install the Sliding Puzzles Gym environment, run the following command:
+To install SPGym, run the following command:
 
 ```bash
 pip install sliding-puzzles
@@ -56,7 +57,7 @@ sliding-puzzles setup imagenet
 
 ## Usage
 
-To use the Sliding Puzzles Gym environment in your project, follow these steps:
+To use SPGym in your project, follow these steps:
 
 1. Import the environment:
 
@@ -64,7 +65,7 @@ To use the Sliding Puzzles Gym environment in your project, follow these steps:
 import sliding_puzzles
 
 # For image-based puzzles
-env = sliding_puzzles.make(w=3, variation="image", image_folder="imagenet-1k", render_mode="human")
+env = sliding_puzzles.make(w=3, variation="image", image_folder="imagenet-1k", image_pool_size=2, render_mode="human")
 
 # For number-based puzzles
 env = sliding_puzzles.make(w=3, variation="onehot", render_mode="state")
@@ -72,7 +73,7 @@ env = sliding_puzzles.make(w=3, variation="onehot", render_mode="state")
 # Alternatively, use Gymnasium to make the environment
 import gymnasium
 import sliding_puzzles
-env = gymnasium.make("SlidingPuzzles-v0", w=3, variation="image", image_folder="imagenet-1k", render_mode="human")
+env = gymnasium.make("SlidingPuzzles-v0", w=3, variation="image", image_folder="imagenet-1k", image_pool_size=2, render_mode="human")
 ```
 
 2. Interact with the environment using the standard Gym interface:
@@ -92,6 +93,7 @@ env.close()
 ## Environment Details
 
 ![Modalities](docs/modalities.png)
+> <b>Different observation modalities in SPGym.</b> Each modality presents a unique challenge for representation learning. The four presented observations represent the same latent puzzle state. Currently, text overlay modalities are not available.
 
 - **Observation Space**: There are multiple available observation spaces, including raw (the 2D state array), onehot (the state array one-hot encoded in 1D), and image (an image overlayed on top of the puzzle).
 - **Action Space**: The action space is discrete, with four possible actions: 0 (up), 1 (down), 2 (left), 3 (right). Other integers are allowed but are treated as no-op.
@@ -142,7 +144,7 @@ Note: These parameters are specific to the image variation of the Sliding Puzzle
 
 ## Contributing
 
-Contributions to the Sliding Puzzles Gym Environment are welcome! Please follow these steps to contribute:
+Contributions to the SPGym are welcome! Please follow these steps to contribute:
 
 1. Fork the repository
 2. Create a new branch for your feature
