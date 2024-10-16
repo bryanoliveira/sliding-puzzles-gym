@@ -1,7 +1,9 @@
 import numpy as np
+import gymnasium as gym
 import sliding_puzzles
 
-env = sliding_puzzles.make(
+env = gym.make(
+    "SlidingPuzzles-v0",
     seed=2,
     render_mode="human",
     w=3,
@@ -22,14 +24,13 @@ env = sliding_puzzles.make(
     variation=["raw", "onehot", "image"][2],
     image_folder=[
         "test",
-        "mnist",
         "imagenet-1k",
-    ][0],
+    ][1],
     image_pool_size=3,
     # background_color_rgb=(255, 0, 0)
     image_size=(1024, 1024),
 )
-env.setup_render_controls()
+env.unwrapped.setup_render_controls()
 obs, info = env.reset()
 print(info)
 total_reward = 0
