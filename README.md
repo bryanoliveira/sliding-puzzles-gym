@@ -1,9 +1,9 @@
 # Sliding Puzzles Gym Environment
 
 <div align="center">
-  <img src="docs/example1.gif" width="30%" alt="Example 1">
-  <img src="docs/example2.gif" width="30%" alt="Example 2">
-  <img src="docs/example3.gif" width="30%" alt="Example 4">
+  <img src="https://raw.githubusercontent.com/bryanoliveira/sliding-puzzles-gym/main/docs/example1.gif" width="30%" alt="Example 1">
+  <img src="https://raw.githubusercontent.com/bryanoliveira/sliding-puzzles-gym/main/docs/example2.gif" width="30%" alt="Example 2">
+  <img src="https://raw.githubusercontent.com/bryanoliveira/sliding-puzzles-gym/main/docs/example3.gif" width="30%" alt="Example 4">
   <br>
   <small>A PPO agent solving the environment.</small>
 </div>
@@ -19,7 +19,7 @@
 
 ## Introduction
 
-![Sliding Puzzle Diagram](docs/diagram.png)
+![Sliding Puzzle Diagram](https://raw.githubusercontent.com/bryanoliveira/sliding-puzzles-gym/main/docs/diagram.png)
 > <b>Overview of the Sliding Puzzles Gym (SPGym).</b> The framework extends the 15-tile puzzle by incorporating image-based tiles, allowing scalable representation complexity while maintaining fixed environment dynamics.
 
 The Sliding Puzzles Gym (SPGym) is a customizable Gymnasium-compatible environment designed for training and evaluating reinforcement learning algorithms on sliding puzzle tasks. This environment, as described in our recent paper [Sliding Puzzles Gym: A Scalable Benchmark for State Representation in Visual Reinforcement Learning](), serves as a benchmark for assessing the representation learning capabilities of various RL algorithms. The code for reproducing the paper results can be found [here](https://github.com/bryanoliveira/spgym-experiments).
@@ -92,7 +92,7 @@ env.close()
 
 ## Environment Details
 
-![Modalities](docs/modalities.png)
+![Modalities](https://raw.githubusercontent.com/bryanoliveira/sliding-puzzles-gym/main/docs/modalities.png)
 > <b>Different observation modalities in SPGym.</b> Each modality presents a unique challenge for representation learning. The four presented observations represent the same latent puzzle state. Currently, text overlay modalities are not available.
 
 - **Observation Space**: There are multiple available observation spaces, including raw (the 2D state array), onehot (the state array one-hot encoded in 1D), and image (an image overlayed on top of the puzzle).
