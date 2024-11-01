@@ -229,3 +229,30 @@ class NormalizedImageWrapper(gym.ObservationWrapper):
 
     def observation(self, obs):
         return np.array(obs, dtype=np.float32) / 255.0
+
+
+class ContinuousActionWrapper(gym.ActionWrapper):
+    """
+    Wrapper to convert continuous actions to discrete actions.
+    Behaves like a joystick: first axis is up(+)/down(-), second is left(-)/right(+).
+    If the activation threshold is met (which defaults to 0), the action with highest value will be selected.
+    """
+
+    def __init__(self, env, activation_threshold=0, **kwargs):
+        super().__init__(env)
+        self.activation_threshold = activation_threshold
+        self.action_space = gym.spaces.Box(
+            low=-1, high=1, shape=(2,), dtype=np.float32
+        )
+
+    def action(self, action):
+        """
+        Converts a 2-axis continuous action into a discrete action between 0 and 4 (4 being a no-op).
+        """
+        if np.max(np.abs(action)) <= self.activation_threshold:
+            return 4  # no-op
+
+        if abs(action[0]) > abs(action[1]):
+            return 0 if action[0] > 0 else 1  # up or down
+        else:
+            return 2 if action[1] < 0 else 3  # left or right
