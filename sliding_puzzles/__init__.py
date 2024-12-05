@@ -4,7 +4,7 @@ import tarfile
 from enum import Enum
 
 import click
-import gymnasium as gym
+import gymnasium
 import numpy as np
 import requests
 
@@ -90,10 +90,17 @@ def imagenet():
     click.echo(f"Images extracted to {extract_dir}")
 
 
-gym.envs.register(
+gymnasium.envs.register(
     id="SlidingPuzzles-v0",
     entry_point=make,
 )
+
+def register_gym():
+    import gym
+    gym.envs.register(
+        id="SlidingPuzzles-v0",
+        entry_point=make,
+    )
 
 if __name__ == "__main__":
     cli()

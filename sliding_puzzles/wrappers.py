@@ -7,6 +7,24 @@ import numpy as np
 from PIL import Image
 
 
+class GymCompatibilityWrapper(gym.Wrapper):
+    def __init__(self, env, **kwargs):
+        super().__init__(env)
+        self._max_episode_steps = env.unwrapped.max_episode_steps
+
+    def reset(self, **kwargs):
+        observation, info = self.env.reset(**kwargs)
+        return observation  # Return only observation for Gym compatibility
+
+    def step(self, action):
+        observation, reward, terminated, truncated, info = self.env.step(action)
+        done = terminated or truncated
+        return observation, reward, done, info  # Convert to Gym style
+    
+    def render(self, *args, **kwargs):
+        return self.env.render()
+
+
 class NormalizedObsWrapper(gym.ObservationWrapper):
     def __init__(self, env, **kwargs):
         super().__init__(env)
@@ -90,6 +108,7 @@ class BaseImageWrapper(gym.ObservationWrapper):
             dtype=np.uint8,
         )
         self.env.unwrapped.render = self.render
+        self.current_image = None
 
     def reset(self, **kwargs):
         image = self.load_random_image()
@@ -123,8 +142,8 @@ class BaseImageWrapper(gym.ObservationWrapper):
                     new_image.paste(
                         section, (j * self.section_size[0], i * self.section_size[1])
                     )
-
-        return np.array(new_image, dtype=np.uint8)
+        self.current_image = np.array(new_image, dtype=np.uint8)
+        return self.current_image
 
     def render(self, mode=None):
         if mode is None:
@@ -132,13 +151,12 @@ class BaseImageWrapper(gym.ObservationWrapper):
 
         if mode in ["human", "rgb_array"]:
             current_obs = self.env.unwrapped.state
-            img_obs = self.observation(current_obs)
 
             if mode == "rgb_array":
-                return img_obs
+                return self.current_image
 
             self.env.unwrapped.ax.clear()
-            self.env.unwrapped.ax.imshow(img_obs)
+            self.env.unwrapped.ax.imshow(self.current_image)
             self.env.unwrapped.fig.canvas.draw()
             self.env.unwrapped.fig.canvas.flush_events()
 
@@ -201,7 +219,7 @@ class ChannelFirstImageWrapper(gym.ObservationWrapper):
         super().__init__(env)
         assert len(env.observation_space.shape) == 3, f"{env.observation_space.shape}"
         assert env.observation_space.dtype == np.uint8, f"{env.observation_space.dtype}"
-        channel_first_shape = sorted(env.observation_space.shape)
+        channel_first_shape = tuple(sorted(env.observation_space.shape))
         self.should_transpose = channel_first_shape != env.observation_space.shape
 
         self.observation_space = gym.spaces.Box(
