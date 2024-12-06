@@ -94,6 +94,9 @@ class BaseImageWrapper(gym.ObservationWrapper):
         **kwargs,
     ):
         super().__init__(env)
+        assert isinstance(image_size, tuple) or isinstance(image_size, int), f"{image_size}"
+        if isinstance(image_size, int):
+            image_size = (image_size, image_size)
         self.image_size = image_size
         self.background_color_rgb = background_color_rgb
         self.section_size = (
