@@ -3,6 +3,7 @@ from typing import Optional
 
 import gymnasium as gym
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from PIL import Image
@@ -178,6 +179,7 @@ class SlidingEnv(gym.Env):
         # Initialize the plot
         if render_mode in ["human", "rgb_array"]:
             if render_mode == "rgb_array":
+                matplotlib.use('Agg')
                 plt.ioff()
             else:
                 plt.ion()
