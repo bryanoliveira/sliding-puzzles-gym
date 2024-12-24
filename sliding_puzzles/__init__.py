@@ -64,7 +64,9 @@ def imagenet():
     extract_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "imgs", "imagenet-1k")
 
     # Ask the user for their Hugging Face token
-    token = click.prompt(f"Please enter your Hugging Face token to download the dataset from {url}", hide_input=True)
+    token = os.getenv("HF_TOKEN")
+    if token is None:
+        token = click.prompt(f"Please enter your Hugging Face token to download the dataset from {url}", hide_input=True)
 
     headers = {"Authorization": f"Bearer {token}"}
     response = requests.get(url, stream=True, headers=headers)
