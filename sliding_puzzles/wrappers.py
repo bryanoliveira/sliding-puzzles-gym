@@ -185,7 +185,7 @@ class ImageFolderWrapper(BaseImageWrapper):
             self.image_folder = image_folder
         else:
             base_dir = os.path.dirname(__file__)
-            self.image_folder = os.path.join(base_dir, "../imgs", image_folder)
+            self.image_folder = os.path.join(base_dir, "imgs", image_folder)
 
         all_images = os.listdir(self.image_folder)
         if image_pool_size is None:

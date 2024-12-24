@@ -61,7 +61,7 @@ def imagenet():
     """Download and extract images for the Sliding Puzzles environment."""
     url = "https://huggingface.co/datasets/ILSVRC/imagenet-1k/resolve/main/data/val_images.tar.gz"
     tar_file = "val_images.tar.gz"
-    extract_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "imgs", "imagenet-1k")
+    extract_dir = os.path.join(os.path.dirname(__file__), "imgs", "imagenet-1k")
 
     # Ask the user for their Hugging Face token
     token = os.getenv("HF_TOKEN")
