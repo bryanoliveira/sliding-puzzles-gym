@@ -63,6 +63,14 @@ def imagenet():
     tar_file = "val_images.tar.gz"
     extract_dir = os.path.join(os.path.dirname(__file__), "imgs", "imagenet-1k")
 
+    # Check if dataset already exists
+    if os.path.exists(extract_dir):
+        click.echo("Skipping download since dataset already exists at " + extract_dir)
+        return
+    
+    # Create extract directory if it doesn't exist
+    os.makedirs(extract_dir, exist_ok=True)
+
     # Ask the user for their Hugging Face token
     token = os.getenv("HF_TOKEN")
     if token is None:
