@@ -1,6 +1,6 @@
 runs/
 sliding_puzzles/imgs/*
-!sliding_puzzles/imgs/test/
+!sliding_puzzles/imgs/demo/
 test.pkl
 
 # Byte-compiled / optimized / DLL files
