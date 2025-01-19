@@ -153,8 +153,6 @@ class BaseImageWrapper(gym.ObservationWrapper):
             mode = self.env.unwrapped.render_mode
 
         if mode in ["human", "rgb_array"]:
-            current_obs = self.env.unwrapped.state
-
             if mode == "rgb_array":
                 return self.current_image
 

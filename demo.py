@@ -36,7 +36,7 @@ print(info)
 total_reward = 0
 while True:
     env.render()
-    # action = np.random.choice(env.valid_actions())
+    # action = np.random.choice(env.unwrapped.valid_actions())
     action = None
     obs, reward, done, trunc, info = env.step(action)
     if info["last_action"] < 4:

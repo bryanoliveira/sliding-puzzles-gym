@@ -156,22 +156,17 @@ class SlidingEnv(gym.Env):
         ]
 
         # Initializations
+        self.set_solved_puzzle()
         self.action = 4  # No action
         self.last_reward = self.move_reward
         self.last_terminated = False
         self.steps = 0
-
-        # Create an initial state with numbered tiles and one blank tile
-        self.set_solved_puzzle()
+        self.last_info = {"is_success": False, "state": self.state, "last_action": 4}
 
         # Calculate the max distance each tile can be from its goal
         self.total_max_distances = 0
         for goal_y in range(self.grid_size_h):
             for goal_x in range(self.grid_size_w):
-                if (goal_y, goal_x) == (self.grid_size_h - 1, self.grid_size_w - 1):
-                    # skip blank tile
-                    continue
-
                 self.total_max_distances += max(
                     goal_y, (self.grid_size_h - 1) - goal_y
                 ) + max(goal_x, (self.grid_size_w - 1) - goal_x)
@@ -182,6 +177,7 @@ class SlidingEnv(gym.Env):
                 matplotlib.use('Agg')
                 plt.ioff()
             else:
+                matplotlib.use('TkAgg')
                 plt.ion()
 
             self.fig, self.ax = plt.subplots()
@@ -204,6 +200,9 @@ class SlidingEnv(gym.Env):
         if action is None:
             action = self.action
         self.action = 4  # reset preset action to "do nothing"
+        if action == 4:
+            self.last_info["last_action"] = 4
+            return self.state, self.last_reward, self.last_terminated, False, self.last_info
 
         # Get the position of the blank tile
         y, x = self.blank_pos
@@ -240,12 +239,12 @@ class SlidingEnv(gym.Env):
             self.steps += 1
 
         truncated = self.max_steps and self.steps >= self.max_steps
-        info = {"is_success": terminated, "state": self.state, "last_action": action}
+        self.last_info = {"is_success": terminated, "state": self.state, "last_action": action}
 
         if self.render_mode == "human":
             self.render()
 
-        return self.state, reward, terminated, truncated, info
+        return self.state, reward, terminated, truncated, self.last_info
 
     def reset(self, options=None, seed=None):
         self.steps = 0
@@ -259,9 +258,6 @@ class SlidingEnv(gym.Env):
                 target_reward=self.shuffle_target_reward,
                 render=self.shuffle_render,
             )
-
-        if self.render_mode == "human":
-            self.render()
 
         return self.state, {"is_success": False, "state": self.state}
 
@@ -332,11 +328,13 @@ class SlidingEnv(gym.Env):
             for i in range(self.grid_size_h):
                 for j in range(self.grid_size_w):
                     value = self.state[i, j]
-                    if value > 0:
-                        # Calculate goal position for the current value
-                        goal_y, goal_x = divmod(value - 1, self.grid_size_w)
-                        # Sum the Manhattan distances
-                        total_distance += abs(goal_y - i) + abs(goal_x - j)
+                    if value <= 0:  # blank tile is placed bottom right
+                        value = self.grid_size_h * self.grid_size_w
+
+                    # Calculate goal position for the current value
+                    goal_y, goal_x = divmod(value - 1, self.grid_size_w)
+                    # Sum the Manhattan distances
+                    total_distance += abs(goal_y - i) + abs(goal_x - j)
 
             # Normalize the reward
             reward = -(total_distance / self.total_max_distances)
@@ -347,7 +345,7 @@ class SlidingEnv(gym.Env):
         return reward, False
 
     def set_solved_puzzle(self):
-        self.state = np.arange(1, self.grid_size_h * self.grid_size_w + 1).reshape(
+        self.state = np.arange(1, self.grid_size_h * self.grid_size_w + 1, dtype=np.int32).reshape(
             self.grid_size_h, self.grid_size_w
         )
         self.blank_pos = (self.grid_size_h - 1, self.grid_size_w - 1)
@@ -355,7 +353,7 @@ class SlidingEnv(gym.Env):
 
     def set_shuffled_puzzle(self):
         # Exclude the blank tile for shuffling
-        puzzle_array = np.arange(1, self.grid_size_h * self.grid_size_w)
+        puzzle_array = np.arange(1, self.grid_size_h * self.grid_size_w, dtype=np.int32)
         # Shuffle the array
         np.random.shuffle(puzzle_array)
         inversions = count_inversions(puzzle_array)
