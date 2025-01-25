@@ -1,6 +1,7 @@
 import math
 import os
 import random
+from typing import Optional
 
 import gymnasium as gym
 import numpy as np
@@ -174,8 +175,9 @@ class ImageFolderWrapper(BaseImageWrapper):
         self,
         env,
         image_folder: str = "single",
-        image_pool_size: int = None,
-        image_pool_seed: int = None,
+        image_pool_size: Optional[int] = None,
+        image_pool_seed: Optional[int] = None,
+        images: Optional[list[str]] = None,
         **kwargs,
     ):
         super().__init__(env, **kwargs)
@@ -186,27 +188,31 @@ class ImageFolderWrapper(BaseImageWrapper):
             self.image_folder = os.path.join(base_dir, "imgs", image_folder)
 
         all_images = os.listdir(self.image_folder)
-        if image_pool_size is None:
-            image_pool_size = 1 if image_folder == "single" else len(all_images)
-            print(
-                f"Inferring image pool size from folder {image_folder}: {image_pool_size}"
-            )
+
+        if images is None:
+            if image_pool_size is None:
+                image_pool_size = 1 if image_folder == "single" else len(all_images)
+                print(
+                    f"Inferring image pool size from folder {image_folder}: {image_pool_size}"
+                )
+            else:
+                image_pool_size = int(image_pool_size)
+
+            if image_pool_size > len(all_images):
+                print(
+                    f"WARNING: Image pool size {image_pool_size} is greater "
+                    f"than the number of images in the folder {self.image_folder}. "
+                    f"Reducing to {len(all_images)}"
+                )
+                image_pool_size = len(all_images)
+
+            if image_pool_seed is None:
+                image_pool_seed = self.env.unwrapped.seed
+
+            rng = random.Random(image_pool_seed)
+            self.images = rng.sample(all_images, int(image_pool_size))
         else:
-            image_pool_size = int(image_pool_size)
-
-        if image_pool_size > len(all_images):
-            print(
-                f"WARNING: Image pool size {image_pool_size} is greater "
-                f"than the number of images in the folder {self.image_folder}. "
-                f"Reducing to {len(all_images)}"
-            )
-            image_pool_size = len(all_images)
-
-        if image_pool_seed is None:
-            image_pool_seed = self.env.unwrapped.seed
-
-        rng = random.Random(image_pool_seed)
-        self.images = rng.sample(all_images, int(image_pool_size))
+            self.images = images
 
     def load_random_image(self):
         # load image
