@@ -256,7 +256,6 @@ class SlidingEnv(gym.Env):
 
             assert self.blank_value in state or "blank_pos" in options, "blank_pos must be specified when state is provided and blank_value is not in state"
             blank_pos = tuple(options["blank_pos"]) if "blank_pos" in options else tuple(np.argwhere(state == self.blank_value)[0])
-            print(blank_pos)
             assert len(blank_pos) == 2, "blank_pos must have len = 2"
             state[blank_pos] = self.blank_value
 
