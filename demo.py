@@ -21,7 +21,7 @@ env = gym.make(
     # shuffle_mode="serial",
     # shuffle_steps=0,
 
-    variation=["raw", "onehot", "image"][2],
+    variation=["raw", "onehot", "image"][0],
     image_folder=[
         "test",
         "imagenet-1k",
@@ -35,8 +35,15 @@ env = gym.make(
     ]
 )
 env.unwrapped.setup_render_controls()
-obs, info = env.reset()
+
+state = [
+    [-1, 5, 2],
+    [7, 3, 4],
+    [8, 6, 1]
+]
+obs, info = env.reset(options={"state": state})
 print(info)
+
 total_reward = 0
 while True:
     env.render()
