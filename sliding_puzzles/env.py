@@ -251,7 +251,7 @@ class SlidingEnv(gym.Env):
             self.set_seed(seed)
         self.steps = 0
         # Create an initial state with numbered tiles and one blank tile
-        if "state" in options:
+        if options is not None and "state" in options:
             state = np.array(options["state"], dtype=np.int32).reshape(self.grid_size_h, self.grid_size_w)
 
             assert self.blank_value in state or "blank_pos" in options, "blank_pos must be specified when state is provided and blank_value is not in state"
