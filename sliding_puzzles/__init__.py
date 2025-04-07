@@ -23,8 +23,7 @@ class EnvType(Enum):
 def make(**env_config):
     seed = env_config.get("seed", None)
     if seed is not None:
-        np.random.seed(seed)
-        random.seed(seed)
+        env_config["seed"] = seed
 
     if "w" not in env_config and "h" not in env_config:
         env_config["w"] = 3

@@ -247,9 +247,25 @@ class SlidingEnv(gym.Env):
         return self.state, reward, terminated, truncated, self.last_info
 
     def reset(self, options=None, seed=None):
+        if seed is not None:
+            self.set_seed(seed)
         self.steps = 0
         # Create an initial state with numbered tiles and one blank tile
-        if self.shuffle_mode == "fast":
+        if options is not None and "state" in options:
+            state = np.array(options["state"], dtype=np.int32).reshape(self.grid_size_h, self.grid_size_w)
+
+            assert self.blank_value in state or "blank_pos" in options, "blank_pos must be specified when state is provided and blank_value is not in state"
+            blank_pos = tuple(options["blank_pos"]) if "blank_pos" in options else tuple(np.argwhere(state == self.blank_value)[0])
+            assert len(blank_pos) == 2, "blank_pos must have len = 2"
+            state[blank_pos] = self.blank_value
+
+            expected_values = set(range(1, self.grid_size_h * self.grid_size_w))
+            actual_values = set(state[state > 0].flatten())
+            assert expected_values == actual_values, f"state must contain all values from 1 to {self.grid_size_h * self.grid_size_w - 1}"
+
+            self.blank_pos = blank_pos
+            self.state = state
+        elif self.shuffle_mode == "fast":
             self.set_shuffled_puzzle()
         else:
             self.set_solved_puzzle()
@@ -446,6 +462,11 @@ class SlidingEnv(gym.Env):
 
         if render:
             print(f"Shuffling done! r={r} steps={steps}")
+
+    def set_seed(self, seed):
+        self.seed = seed
+        np.random.seed(seed)
+        random.seed(seed)
 
 
 # Test the environment
