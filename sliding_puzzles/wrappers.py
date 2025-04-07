@@ -77,6 +77,29 @@ class OneHotEncodingWrapper(gym.ObservationWrapper):
                 ] = 1
         return one_hot_encoded
 
+class CoordinatesWrapper(gym.ObservationWrapper):
+    def __init__(self, env, normalize=True, **kwargs):
+        super().__init__(env)
+        self.normalize = (
+            float(max(self.env.unwrapped.grid_size_h, self.env.unwrapped.grid_size_w) - 1)
+            if normalize
+            else 1.0
+        )
+        self.observation_space = gym.spaces.Box(
+            low=0,
+            high=self.env.unwrapped.grid_size_h - 1,
+            shape=(2 * self.env.unwrapped.grid_size_h * self.env.unwrapped.grid_size_w,),
+            dtype=np.float32,
+        )
+
+    def observation(self, obs):
+        # Create array of values, replacing negatives with 0
+        goal_i, goal_j = np.divmod(obs.clip(min=0), self.env.unwrapped.grid_size_w)
+        # Stack and flatten the coordinates
+        coordinates = np.column_stack((goal_i.flatten(), goal_j.flatten())).flatten().astype(np.float32)
+        if self.normalize:
+            coordinates /= self.normalize
+        return coordinates
 
 class ExponentialRewardWrapper(gym.RewardWrapper):
     def __init__(self, env, **kwargs):
@@ -188,6 +211,7 @@ class ImageFolderWrapper(BaseImageWrapper):
             self.image_folder = os.path.join(base_dir, "imgs", image_folder)
 
         all_images = os.listdir(self.image_folder)
+        self.current_image_name = None
 
         if images is None:
             if image_pool_size is None:
@@ -216,7 +240,8 @@ class ImageFolderWrapper(BaseImageWrapper):
 
     def load_random_image(self):
         # load image
-        random_image_path = os.path.join(self.image_folder, random.choice(self.images))
+        self.current_image_name = random.choice(self.images)
+        random_image_path = os.path.join(self.image_folder, self.current_image_name)
         image = Image.open(random_image_path).resize(self.image_size)
         return image
 

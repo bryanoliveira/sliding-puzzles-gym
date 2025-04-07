@@ -17,6 +17,7 @@ class EnvType(Enum):
     image = "image"
     normalized = "normalized"
     onehot = "onehot"
+    coordinates = "coordinates"
 
 
 def make(**env_config):
@@ -25,14 +26,19 @@ def make(**env_config):
         np.random.seed(seed)
         random.seed(seed)
 
+    if "w" not in env_config and "h" not in env_config:
+        env_config["w"] = 3
+
     env = SlidingEnv(**env_config)
 
-    if "variation" not in env_config or EnvType(env_config["variation"]) is EnvType.raw:
-        pass
+    if "variation" not in env_config or EnvType(env_config["variation"]) is EnvType.onehot:
+        env = wrappers.OneHotEncodingWrapper(env)
     elif EnvType(env_config["variation"]) is EnvType.normalized:
         env = wrappers.NormalizedObsWrapper(env)
-    elif EnvType(env_config["variation"]) is EnvType.onehot:
-        env = wrappers.OneHotEncodingWrapper(env)
+    elif EnvType(env_config["variation"]) is EnvType.coordinates:
+        env = wrappers.CoordinatesWrapper(env)
+    elif EnvType(env_config["variation"]) is EnvType.raw:
+        pass
     elif EnvType(env_config["variation"]) is EnvType.image:
         assert "image_folder" in env_config, "image_folder must be specified in config"
 
@@ -40,7 +46,7 @@ def make(**env_config):
             env,
             **env_config,
         )
-    
+
     if "continuous_actions" in env_config and env_config["continuous_actions"]:
         env = wrappers.ContinuousActionWrapper(env)
 
