@@ -210,7 +210,12 @@ class ImageFolderWrapper(BaseImageWrapper):
             base_dir = os.path.dirname(__file__)
             self.image_folder = os.path.join(base_dir, "imgs", image_folder)
 
-        all_images = os.listdir(self.image_folder)
+        valid_extensions = ('.png', '.jpg', '.jpeg', '.bmp', '.gif', '.tiff')
+        all_images = [
+            fname for fname in os.listdir(self.image_folder)
+            if os.path.isfile(os.path.join(self.image_folder, fname))
+            and fname.lower().endswith(valid_extensions)
+        ]
         self.current_image_name = None
 
         if images is None:
