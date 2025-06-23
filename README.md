@@ -100,7 +100,7 @@ env.close()
 - **Reward Function**: The default reward is the negative normalized distances for all tiles to their target position at each step taken (a float between -1 and 0). By default the agent gets +10 for solving the puzzle.
 - **Episode Termination**: An episode ends when the puzzle is solved (terminated) or a maximum number of steps is reached (truncated).
 
-More information can be found in our [paper]().
+More information can be found in our [paper](https://arxiv.org/abs/2410.14038).
 
 ## Environment Parameters
 
