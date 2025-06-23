@@ -22,7 +22,7 @@
 ![Sliding Puzzle Diagram](https://raw.githubusercontent.com/bryanoliveira/sliding-puzzles-gym/main/docs/diagram.png)
 > <b>Overview of the Sliding Puzzles Gym (SPGym).</b> The framework extends the 15-tile puzzle by incorporating image-based tiles, allowing scalable representation complexity while maintaining fixed environment dynamics.
 
-The Sliding Puzzles Gym (SPGym) is a customizable Gymnasium-compatible environment designed for training and evaluating reinforcement learning algorithms on sliding puzzle tasks. This environment, as described in our recent paper [Sliding Puzzles Gym: A Scalable Benchmark for State Representation in Visual Reinforcement Learning](), serves as a benchmark for assessing the representation learning capabilities of various RL algorithms. The code for reproducing the paper results can be found [here](https://github.com/bryanoliveira/spgym-experiments).
+The Sliding Puzzles Gym (SPGym) is a customizable Gymnasium-compatible environment designed for training and evaluating reinforcement learning algorithms on sliding puzzle tasks. This environment, as described in our ICML 2025 paper [Sliding Puzzles Gym: A Scalable Benchmark for State Representation in Visual Reinforcement Learning](https://arxiv.org/abs/2410.14038), serves as a benchmark for assessing the representation learning capabilities of various RL algorithms. The code for reproducing the paper results can be found [here](https://github.com/bryanoliveira/spgym-experiments).
 
 Our research demonstrates how sliding puzzles can be used to evaluate an RL agent's ability to learn and utilize spatial relationships and compositional visual representations. The environment supports various puzzle sizes, image-based puzzles, and different rendering modes, allowing for a comprehensive analysis of algorithm performance across different complexity levels and input modalities. Crucially, the visual complexity of the task can be controlled via the `image_pool_size` parameter, which defines how many different images the agent will see during training.
 
@@ -134,13 +134,27 @@ The image variation of the Sliding Puzzle environment accepts these additional p
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `image_folder` | str | "single" | The folder containing the images to be used for the puzzle. |
+| `image_folder` | str | "demo" | The folder containing the images to be used for the puzzle. |
 | `image_pool_size` | Optional[int] | None | The number of images to use from the folder. If None, all images in the folder will be used. |
 | `image_pool_seed` | Optional[int] | None | Seed for randomly selecting images from the pool. If None, a random seed will be used. |
 | `image_size` | tuple | (84, 84) | Size of the rendered image (Width x Height). |
 | `background_color_rgb` | tuple | (0, 0, 0) | RGB color of the background (Black by default). |
 
 Note: These parameters are specific to the image variation of the Sliding Puzzle environment and are used in addition to the base environment parameters.
+
+### Text Variation Parameters
+
+The text variation of the Sliding Puzzle environment accepts these additional parameters:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `texts` | list[str] | REQUIRED | The list of texts to use for the puzzle. |
+| `h_separator` | str | " " | The separator to use between the rows of the puzzle. |
+| `w_separator` | str | " " | The separator to use between the columns of the puzzle. |
+| `blank_tile_text` | str | "" | The text to use for the blank tile. |
+
+Note: These parameters are specific to the text variation of the Sliding Puzzle environment and are used in addition to the base environment parameters.
+
 
 ## Contributing
 
@@ -151,6 +165,21 @@ Contributions to the SPGym are welcome! Please follow these steps to contribute:
 3. Commit your changes
 4. Push to the branch
 5. Create a new Pull Request
+
+## Citation
+
+If you use this environment in your research, please cite our paper:
+
+```bibtex
+@inproceedings{
+oliveira2025sliding,
+title={Sliding Puzzles Gym: A Scalable Benchmark for State Representation in Visual Reinforcement Learning},
+author={Bryan Lincoln Marques de Oliveira and Luana Guedes Barros Martins and Bruno Brand{\~a}o and Murilo Lopes da Luz and Telma Woerle de Lima Soares and Luckeciano Carvalho Melo},
+booktitle={Forty-second International Conference on Machine Learning},
+year={2025},
+url={https://openreview.net/forum?id=vlF9bZHrJg}
+}
+```
 
 ## License
 

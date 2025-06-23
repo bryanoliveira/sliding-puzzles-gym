@@ -17,6 +17,7 @@ class EnvType(Enum):
     image = "image"
     normalized = "normalized"
     onehot = "onehot"
+    text_overlay = "text_overlay"
 
 
 def make(**env_config):
@@ -39,6 +40,8 @@ def make(**env_config):
             env,
             **env_config,
         )
+    elif EnvType(env_config["variation"]) is EnvType.text_overlay:
+        env = wrappers.TextOverlayWrapper(env, **env_config)
     
     if "continuous_actions" in env_config and env_config["continuous_actions"]:
         env = wrappers.ContinuousActionWrapper(env)

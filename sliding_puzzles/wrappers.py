@@ -1,7 +1,7 @@
 import math
 import os
 import random
-from typing import Optional
+from typing import Optional, Callable
 
 import gymnasium as gym
 import numpy as np
@@ -174,7 +174,7 @@ class ImageFolderWrapper(BaseImageWrapper):
     def __init__(
         self,
         env,
-        image_folder: str = "single",
+        image_folder: str = "demo",
         image_pool_size: Optional[int] = None,
         image_pool_seed: Optional[int] = None,
         images: Optional[list[str]] = None,
@@ -191,7 +191,7 @@ class ImageFolderWrapper(BaseImageWrapper):
 
         if images is None:
             if image_pool_size is None:
-                image_pool_size = 1 if image_folder == "single" else len(all_images)
+                image_pool_size = 1 if image_folder == "demo" else len(all_images)
                 print(
                     f"Inferring image pool size from folder {image_folder}: {image_pool_size}"
                 )
@@ -281,3 +281,151 @@ class ContinuousActionWrapper(gym.ActionWrapper):
             return 0 if action[0] > 0 else 1  # up or down
         else:
             return 2 if action[1] < 0 else 3  # left or right
+
+
+class TextOverlayWrapper(gym.ObservationWrapper):
+    def __init__(self,
+        env,
+        texts: list[str],
+        blank_tile_text: str = "---",
+        w_separator: str = " ",
+        h_separator: str = "\n",
+        **kwargs,
+    ):
+        super().__init__(env)
+        self.texts = texts
+
+        min_length = self.env.unwrapped.grid_size_w * self.env.unwrapped.grid_size_h
+        max_length = 0
+        for text in texts:
+            if len(text) > max_length:
+                max_length = len(text)
+            if len(text) < min_length:
+                raise ValueError(f"Text {text} is too short. All texts must be at least {min_length} characters long.")
+
+        self.w_separator = w_separator
+        self.h_separator = h_separator
+        self.blank_tile_text = blank_tile_text
+        self.observation_space = gym.spaces.Text(
+            max_length=max_length,
+            min_length=min_length,
+        )
+
+    def reset(self, **kwargs):
+        self.current_text = random.choice(self.texts)
+        self.set_split_text(self.current_text)
+        return super().reset(**kwargs)
+
+    def set_split_text(self, text):
+        self.split_text = []
+        grid_h = self.env.unwrapped.grid_size_h
+        grid_w = self.env.unwrapped.grid_size_w
+        total_tiles = grid_h * grid_w
+
+        # First, try to use explicit separators if they result in correct dimensions
+        h_split = text.split(self.h_separator)
+        if len(h_split) == grid_h:
+            w_split = [t.strip().split(self.w_separator) for t in h_split]
+            if all(len(row) == grid_w for row in w_split):
+                self.split_text = [item.strip() for sublist in w_split for item in sublist]
+                return
+
+        # Smart natural splitting approach
+        words = text.split()
+        if len(words) >= total_tiles:
+            # Try to balance words across rows first
+            words_per_row = len(words) // grid_h
+            remainder_words = len(words) % grid_h
+            
+            row_splits = []
+            word_idx = 0
+            
+            for i in range(grid_h):
+                # Distribute extra words among early rows
+                words_in_this_row = words_per_row + (1 if i < remainder_words else 0)
+                row_words = words[word_idx:word_idx + words_in_this_row]
+                word_idx += words_in_this_row
+                
+                # Now split this row's words across width
+                if len(row_words) >= grid_w:
+                    words_per_col = len(row_words) // grid_w
+                    remainder_cols = len(row_words) % grid_w
+                    
+                    col_idx = 0
+                    for j in range(grid_w):
+                        words_in_this_col = words_per_col + (1 if j < remainder_cols else 0)
+                        if words_in_this_col > 0:
+                            tile_text = " ".join(row_words[col_idx:col_idx + words_in_this_col])
+                            col_idx += words_in_this_col
+                        else:
+                            tile_text = ""
+                        self.split_text.append(tile_text)
+                else:
+                    # If not enough words for this row, distribute what we have
+                    for j in range(grid_w):
+                        if j < len(row_words):
+                            self.split_text.append(row_words[j])
+                        else:
+                            self.split_text.append("")
+            return
+
+        # Fallback: character-based splitting with word boundary awareness
+        target_chars_per_tile = len(text) // total_tiles
+        
+        for i in range(total_tiles):
+            start_pos = i * target_chars_per_tile
+            if i == total_tiles - 1:  # Last tile gets remaining characters
+                end_pos = len(text)
+            else:
+                end_pos = (i + 1) * target_chars_per_tile
+                # Try to end at a word boundary
+                while end_pos < len(text) and text[end_pos] != ' ' and text[end_pos - 1] != ' ':
+                    end_pos += 1
+                    if end_pos - start_pos > target_chars_per_tile * 1.5:  # Don't exceed 150% of target
+                        end_pos = (i + 1) * target_chars_per_tile
+                        break
+            
+            tile_text = text[start_pos:end_pos].strip()
+            self.split_text.append(tile_text)
+
+    def observation(self, obs):
+        new_obs = ""
+        for i in range(self.env.unwrapped.grid_size_h):
+            for j in range(self.env.unwrapped.grid_size_w):
+                section_idx = obs[i, j]
+                if section_idx > 0:
+                    new_obs += self.split_text[section_idx - 1]
+                else:
+                    new_obs += self.blank_tile_text
+                if j < self.env.unwrapped.grid_size_w - 1:
+                    new_obs += f" {self.w_separator.strip()} "
+            if i < self.env.unwrapped.grid_size_h - 1:
+                new_obs += f" {self.h_separator.strip()} "
+
+        return new_obs
+    
+    def render(self, mode=None):
+        if mode is None:
+            mode = self.env.unwrapped.render_mode
+
+        if mode in ["human", "rgb_array"]:
+            # Update the color data
+            self.env.unwrapped.mat.set_data(np.where(self.env.unwrapped.state > 0, 1, 0))
+
+            for i in range(self.env.unwrapped.grid_size_h):
+                for j in range(self.env.unwrapped.grid_size_w):
+                    value = self.env.unwrapped.state[i, j]
+                    self.env.unwrapped.texts[i][j].set_text(
+                        self.split_text[value - 1] if value > 0 else self.blank_tile_text
+                    )  # Update text
+
+            self.env.unwrapped.fig.canvas.draw()
+            self.env.unwrapped.fig.canvas.flush_events()
+
+            if mode == "rgb_array":
+                img = np.array(self.env.unwrapped.fig.canvas.renderer._renderer)
+                img = Image.fromarray(img).convert("RGB")
+                img = img.resize(self.env.unwrapped.render_size)
+                return np.array(img, dtype=np.uint8)
+        elif mode == "state":
+            return self.env.unwrapped.state

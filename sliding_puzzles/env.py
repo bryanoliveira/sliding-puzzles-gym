@@ -289,7 +289,7 @@ class SlidingEnv(gym.Env):
                 for j in range(self.grid_size_w):
                     value = self.state[i, j]
                     self.texts[i][j].set_text(
-                        f"{value}" if value > 0 else ""
+                        str(value) if value > 0 else ""
                     )  # Update text
 
             self.fig.canvas.draw()
